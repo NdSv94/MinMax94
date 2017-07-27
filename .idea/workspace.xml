@@ -20,11 +20,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="Preprocessing.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="Preprocessing.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/Preprocessing.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1965">
-              <caret line="131" column="55" selection-start-line="130" selection-start-column="12" selection-end-line="131" selection-end-column="55" />
+            <state relative-caret-position="-435">
+              <caret line="64" column="17" selection-start-line="59" selection-start-column="0" selection-end-line="64" selection-end-column="17" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -42,11 +42,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Filters.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="Filters.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Filters.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="445">
-              <caret line="99" column="91" selection-start-line="98" selection-start-column="20" selection-end-line="99" selection-end-column="91" />
+            <state relative-caret-position="640">
+              <caret line="82" column="30" selection-start-line="82" selection-start-column="30" selection-end-line="82" selection-end-column="30" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -68,8 +68,8 @@
       <list>
         <option value="$PROJECT_DIR$/src/Downloader.py" />
         <option value="$PROJECT_DIR$/src/test_area.py" />
-        <option value="$PROJECT_DIR$/src/Preprocessing.py" />
         <option value="$PROJECT_DIR$/src/Filters.py" />
+        <option value="$PROJECT_DIR$/src/Preprocessing.py" />
       </list>
     </option>
   </component>
@@ -123,6 +123,16 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="mm94" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="mm94" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -532,20 +542,20 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/Preprocessing.py">
+    <entry file="file://$PROJECT_DIR$/src/Filters.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1965">
-          <caret line="131" column="55" selection-start-line="130" selection-start-column="12" selection-end-line="131" selection-end-column="55" />
+        <state relative-caret-position="640">
+          <caret line="82" column="30" selection-start-line="82" selection-start-column="30" selection-end-line="82" selection-end-column="30" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/Filters.py">
+    <entry file="file://$PROJECT_DIR$/src/Preprocessing.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="445">
-          <caret line="99" column="91" selection-start-line="98" selection-start-column="20" selection-end-line="99" selection-end-column="91" />
+        <state relative-caret-position="-435">
+          <caret line="64" column="17" selection-start-line="59" selection-start-column="0" selection-end-line="64" selection-end-column="17" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
