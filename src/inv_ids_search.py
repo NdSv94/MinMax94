@@ -34,7 +34,7 @@ mypath = './data_csv/Raw/'
 
 flags = tf.flags
 
-flags.DEFINE_string("data_path", mypath,
+flags.DEFINE_string("data_path", None,
                     "Where the raw data is stored.")
 
 FLAGS = flags.FLAGS
@@ -86,21 +86,21 @@ def main(_):
 
     #finding invalid data and creating dataset with them
 
+    filt = XGBFilter(output='table')
+    inv_ids = filt.verify(final)
+
+
+    with open('invalid_ids.csv', 'w+') as f:
+        inv_ids.to_csv(f)
+
+
+    #
     # filt = XGBFilter(output='table')
     # inv_ids = filt.verify(final)
     #
     #
-    # with open('invalid_ids.csv', 'w+') as f:
-    #     inv_ids.to_csv(f)
-
-
-
-    filt = XGBFilter(output='ids')
-    inv_ids = filt.verify(final)
-
-
-    with open('invalid_ids.pkl', 'w+') as f:
-        pickle.dump(inv_ids, f)
+    # with open('invalid_ids.pkl', 'w+') as f:
+    #     pickle.dump(inv_ids, f)
 
 
 if __name__ == "__main__":
