@@ -44,10 +44,9 @@ def quantile_huber_obj(preds, dtrain, _alpha, _delta):
     return grad, hess
 
 #------------------------------------------------------------------------------------------------
-
-class XGBFilter():
+class XGB_Quantile():
     def __init__(self, sensors=['t_road', 't_air', 't_underroad'], output='table',
-                 path_to_filter='estimators/pima.pickle.'):
+                 path_to_filter='/home/ndsviriden/estimators/pima.pickle.'):
         self.sensors = sensors
         self.path = path_to_filter
         self.output = output
@@ -71,6 +70,9 @@ class XGBFilter():
 
             if self.output == 'table':
                 self.df_filtered[('valid_' + test_label, 0)] = ((y_true < y_upper) & (y_true > y_lower))
+                self.df_filtered[('upper_'+ test_label, 0)] = y_upper
+                self.df_filtered[('lower_' + test_label, 0)] = y_lower
+
                 self.verified = True
 
             elif self.output == 'ids':
