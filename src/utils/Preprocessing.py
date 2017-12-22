@@ -60,18 +60,21 @@ class Preprocessor():
     def __init__(self):
         pass
 
+    def SelectFeatures(self, df, features):
+        return df[df['type'].isin(features)]
+
     def PivotTable(self, df):
         upper_columns = [col for col in df.columns if col in ('data', 'id', 'valid')]
         df_pivoted = df.pivot_table(index=['station_id', 'date_time'], columns='type', values=upper_columns)
         df_pivoted = df_pivoted.reset_index()
-        #del df_pivoted.columns.name
         df_pivoted.columns.names = [None] * len(df_pivoted.columns.names)
+        df_pivoted = set_onelevel(df_pivoted)
         return df_pivoted
 
     def FixPressureScale(self, df_pivoted):
-        if 'pressure' in df_pivoted.columns.levels[1]:
-            df_pivoted[('data', 'pressure')] = np.where((df_pivoted[('data', 'pressure')] > 700) & (df_pivoted[('data', 'pressure')] < 800),
-                                           df_pivoted[('data', 'pressure')] * 10, df_pivoted[('data', 'pressure')])
+        if 'data_pressure' in df_pivoted.columns:
+            df_pivoted['data_pressure'] = np.where((df_pivoted['data_pressure'] > 700) & (df_pivoted[('data_pressure')] < 800),
+                                           df_pivoted[('data_pressure')] * 10, df_pivoted[('data_pressure')])
         return df_pivoted
 
     def CreatePatternList(self, df_pivoted, max_gap=pd.Timedelta('2h'), min_length=pd.Timedelta('12h')):
