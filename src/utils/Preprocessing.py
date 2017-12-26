@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from copy import deepcopy
-from tqdm import tqdm_notebook
 
 def set_onelevel(df):
     df_return = deepcopy(df)
