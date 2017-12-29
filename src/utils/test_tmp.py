@@ -1,29 +1,24 @@
-import pandas as pd
-import numpy as np
-from copy import deepcopy
-import gc
-from tqdm import tqdm_notebook
+import unittest
+import time
+import re
 import sys
-sys.path.append('/home/ndsviriden/MinMax94/src/utils')
-from Preprocessing import Preprocessor
-import warnings
-warnings.filterwarnings('ignore')
+import os
 
-# getting file tree in directory "data_csv", which contains raw unfiltered data
-mypath = '/home/ndsviriden/data_csv/113_raw.csv'
-
-# reading loaded csv files from data_csv directory, output is a list (length=number of stations) of raw df
-raw_lmeteo = pd.read_csv(mypath, parse_dates = ['date_time'])
-
-preprocessor = Preprocessor()
-useful_features = ['t_air', 't_road', 't_underroad', 'pressure', 'dampness', 'cloudiness']
-raw_lmeteo = preprocessor.SelectFeatures(raw_lmeteo, useful_features)
-lmeteo_pivot = preprocessor.PivotTable(raw_lmeteo)
-lmeteo_pivot = preprocessor.FixPressureScale(lmeteo_pivot)
-pattern_list = preprocessor.CreatePatternList(lmeteo_pivot)
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 
 
-z = [pattern.date_time.max() - pattern.date_time.min() for pattern in pattern_list]
+driver = webdriver.
+#driver.get("https://rp5.ru/%D0%90%D1%80%D1%85%D0%B8%D0%B2_%D0%BF%D0%BE%D0%B3%D0%BE%D0%B4%D1%8B_%D0%B2_%D0%9C%D0%B0%D0%BB%D0%BE%D1%8F%D1%80%D0%BE%D1%81%D0%BB%D0%B0%D0%B2%D1%86%D0%B5")
+
+#username = driver.find_element_by_id('signin-email')
+#username.send_keys('XXXXXXXX@gmail.com')
+
+#password.submit()
+
+#driver.get('https://twitter.com/followers')
+
+#driver.find_element_by_class('button-text.follow-text').click()
 
 
 
