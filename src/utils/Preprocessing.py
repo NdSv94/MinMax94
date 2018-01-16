@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
 from copy import deepcopy
+from constants import MmxColumns
+from constants import mapper_converter_to_mm94_column
 
 def set_onelevel(df):
     df_return = deepcopy(df)
-    df_return.columns = ['_'.join(col).strip() if col not in (('date_time_utc', ''), ('station_id', ''), ('date_time_local', ''))
+    df_return.columns = ['_'.join(col).strip() if col not in (('date_time_utc', ''), (MmxColumns.STATION_ID, ''), ('date_time_local', ''))
                      else ''.join(col).strip()
                      for col in df.columns.values]
     return df_return
@@ -16,7 +18,7 @@ def set_multilevel(df):
     others = set()
     for column in df.columns:
 
-        if column in ('station_id', 'date_time', 'upper_t_road', 'lower_t_road'):
+        if column in (MmxColumns.STATION_ID, 'date_time', 'upper_t_road', 'lower_t_road'):
             others.add(column)
         else:
             (group, sensor) = column.split('_', 1)
@@ -45,34 +47,42 @@ class Preprocessor():
     def SelectFeatures(self, df, features):
         return df[df['type'].isin(features)]
 
-    def AddUTC(self, df_raw, station_def_path='/mnt/HARD/MinMax94/data/data_all/CSV/stations_def.csv'):
+    def AddUTC(self, df_raw, station_def_path='/mnt/HARD/MinMax94/data/data_all/CSV/stations_mm94_def.csv'):
 
-        station_def = pd.read_csv(station_def_path, index_col=0)
+        station_def = pd.read_csv(station_def_path)
 
         def utc_time(df, station_id):
-            timezone = station_def['timezone'][station_def['station_id'] == station_id].values[0]
+            timezone = station_def['timezone'][station_def[MmxColumns.STATION_ID] == station_id].values[0]
             df['date_time_utc'] = df['date_time'] - pd.Timedelta(str(timezone) + 'h')
             df = df.rename(columns={'date_time': 'date_time_local'})
             return df
-        df_with_utc = df_raw.groupby('station_id').apply(lambda df: utc_time(df, df.name))
+
+        df_with_utc = df_raw.groupby(MmxColumns.STATION_ID).apply(lambda df: utc_time(df, df.name))
         return df_with_utc
 
     def PivotTable(self, df):
         upper_columns = [col for col in df.columns if col in ('data', 'id', 'valid')]
-        df_pivoted = df.pivot_table(index=['station_id', 'date_time_utc', 'date_time_local'], columns='type', values=upper_columns)
+        df_pivoted = df.pivot_table(index=[MmxColumns.STATION_ID, 'date_time_utc', 'date_time_local'], columns='type', values=upper_columns)
         df_pivoted = df_pivoted.reset_index()
         df_pivoted.columns.names = [None] * len(df_pivoted.columns.names)
         df_pivoted = set_onelevel(df_pivoted)
         return df_pivoted
 
     def FixPressureScale(self, df_pivoted):
-        if 'data_pressure' in df_pivoted.columns:
-            df_pivoted['data_pressure'] = np.where((df_pivoted['data_pressure'] > 700) & (df_pivoted[('data_pressure')] < 800),
-                                           df_pivoted[('data_pressure')] * 10, df_pivoted[('data_pressure')])
+        if MmxColumns.PRESSURE in df_pivoted.columns:
+            df_pivoted[MmxColumns.PRESSURE] = np.where((df_pivoted[MmxColumns.PRESSURE] > 700) & (df_pivoted[(MmxColumns.PRESSURE)] < 800),
+                                           df_pivoted[(MmxColumns.PRESSURE)] * 10, df_pivoted[(MmxColumns.PRESSURE)])
         return df_pivoted
 
+    def ConvertDataToMM94(self, df):
+        for key in mapper_converter_to_mm94_column.keys():
+            if key in df.columns:
+                df[key] = mapper_converter_to_mm94_column[key](df[key])
+        return df
+
+
     def CreatePatternList(self, df_pivoted, max_gap=pd.Timedelta('2h'), min_length=pd.Timedelta('12h')):
-        pattern_list = [g for _, g in df_pivoted.groupby(['station_id', (df_pivoted.date_time_utc.diff() > max_gap).cumsum()])
+        pattern_list = [g for _, g in df_pivoted.groupby([MmxColumns.STATION_ID, (df_pivoted.date_time_utc.diff() > max_gap).cumsum()])
                             if g.date_time_utc.iloc[-1] - g.date_time_utc.iloc[0] > min_length]
         df_patterns = pd.concat(pattern_list)
         return df_patterns
@@ -102,19 +112,19 @@ class Preprocessor():
             df_add = pd.DataFrame(index=pd.date_range(start, end, freq='30min', name='date_time_utc'))
             df_add['interpol'] = True
             df_add['date_time_local'] = pd.date_range(start_loc, end_loc, freq='30min', name='date_time_local')
-            df_add['station_id'] = df_result['station_id'].unique()[0]
+            df_add[MmxColumns.STATION_ID] = df_result[MmxColumns.STATION_ID].unique()[0]
 
-            df_result = df_result.merge(df_add, how='outer', on=['station_id', 'interpol', 'date_time_local'], left_index=True,
+            df_result = df_result.merge(df_add, how='outer', on=[MmxColumns.STATION_ID, 'interpol', 'date_time_local'], left_index=True,
                                         right_index=True, sort=True)
 
             for column in data_continuous_columns:
                 df_result[column] = df_result[column].interpolate(method='linear', limit_directiom='both', limit=6)
 
             for column in data_integer_columns:
-                if column == 'data_cloudiness':
+                if column == MmxColumns.CLOUDINESS:
                     df_result[column] = df_result[column].interpolate(method='linear', limit_directiom='both', limit=6).round()
 
-                if column == 'data_precip_code':
+                if column == MmxColumns.PRECIPITATION_CODE:
                     df_result[column] = df_result[column].interpolate(method='nearest', limit_directiom='both', limit=6)
 
 
@@ -127,5 +137,5 @@ class Preprocessor():
             df_result = df_result.reset_index()
             return df_result
 
-        df_interpolated = df_patterns.groupby('station_id').apply(interpolate).reset_index(level='station_id', drop=True)
+        df_interpolated = df_patterns.groupby(MmxColumns.STATION_ID).apply(interpolate).reset_index(level=MmxColumns.STATION_ID, drop=True)
         return df_interpolated

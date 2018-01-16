@@ -1,6 +1,6 @@
 import pandas as pd
 from copy import deepcopy
-from constants import mapper_columns_rp5_to_mm94, RP5Columns, mapper_converter_to_column, MmxColumns
+from constants import mapper_columns_rp5_to_mm94, RP5Columns, mapper_converter_to_rp5_column, MmxColumns
 
 def parse_datetime_rp5(datetime_rp5):
     date, time = datetime_rp5.split(' ')
@@ -31,9 +31,9 @@ def convert_rp5_to_mm94(df_rp5):
     df['date_time'] = pd.to_datetime(df['date_time'].apply(parse_datetime_rp5))
 
     # convert rp5 values to mm94
-    for key in mapper_converter_to_column.keys():
+    for key in mapper_converter_to_rp5_column.keys():
         if key in df.columns:
-            df[key] = mapper_converter_to_column[key](df[key])
+            df[key] = mapper_converter_to_rp5_column[key](df[key])
 
     # count intensity in mm/hour
     df[MmxColumns.PRECIPITATION_INTENSITY] = df[MmxColumns.PRECIPITATION_INTENSITY] / df[MmxColumns.PRECIPITATION_INTERVAL]

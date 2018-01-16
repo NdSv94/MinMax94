@@ -38,23 +38,23 @@ class MmxColumns:
     """
     Abbreviations from minimax system
     """
-    AIR_TEMPERATURE = 't_air'
-    ROAD_TEMPERATURE = 't_road'
-    UNDERGROUND_TEMPERATURE = 't_underroad'
-    HUMIDITY = 'dampness'
-    WIND_SPEED = 'wind_velocity'
-    WIND_MAX_SPEED = 'wind_speedmax'
-    WIND_DIRECTION = 'wind_dir'
-    PRECIPITATION_CODE = 'precip_code'
-    PRECIPITATION_INTENSITY = 'precip_count'
-    PRECIPITATION_INTERVAL = 'precip_interval'
-    FREEZING_POINT = 'freezing_point'
-    DEW_POINT_TEMPERATURE = 'dew_point'
-    SALINITY = 'salinity'
-    PRESSURE = 'pressure'
-    VISIBILITY = 'visibility'
-    P_WEATHER = 'p_weather'
-    CLOUDINESS = 'cloudiness'
+    AIR_TEMPERATURE = 'data_t_air'
+    ROAD_TEMPERATURE = 'data_t_road'
+    UNDERGROUND_TEMPERATURE = 'data_t_underroad'
+    HUMIDITY = 'data_dampness'
+    WIND_SPEED = 'data_wind_velocity'
+    WIND_MAX_SPEED = 'data_wind_speedmax'
+    WIND_DIRECTION = 'data_wind_dir'
+    PRECIPITATION_CODE = 'data_precip_code'
+    PRECIPITATION_INTENSITY = 'data_precip_count'
+    PRECIPITATION_INTERVAL = 'data_precip_interval'
+    FREEZING_POINT = 'data_freezing_point'
+    DEW_POINT_TEMPERATURE = 'data_dew_point'
+    SALINITY = 'data_salinity'
+    PRESSURE = 'data_pressure'
+    VISIBILITY = 'data_visibility'
+    P_WEATHER = 'data_p_weather'
+    CLOUDINESS = 'data_cloudiness'
     STATION_ID = 'station_id'
 
 class MmxPrecipitationCode:
@@ -78,12 +78,10 @@ mapper_columns_rp5_to_mm94 = {
     RP5Columns.VISIBILITY: MmxColumns.VISIBILITY,
     RP5Columns.DEW_POINT_TEMPERATURE: MmxColumns.DEW_POINT_TEMPERATURE,
     RP5Columns.PRECIPITATION_INTENSITY: MmxColumns.PRECIPITATION_INTENSITY,  # quantity of precipitation (mm)
-    RP5Columns.PRECIPITATION_INTERVAL: 'precip_interval',  # time interval during which precip_count was calculated
+    RP5Columns.PRECIPITATION_INTERVAL: 'data_precip_interval',  # time interval during which precip_count was calculated
     RP5Columns.PRECIPITATION_CODE: MmxColumns.PRECIPITATION_CODE,
     RP5Columns.P_WEATHER: MmxColumns.P_WEATHER
 }
-
-
 
 converter_wind_dir_dict_rp5 = {
     "Штиль, безветрие": 0,
@@ -140,11 +138,30 @@ converter_precip_count_dict_rp5 = {
     "Следы осадков": 0.05
     }
 
-mapper_converter_to_column = {
+mapper_converter_to_rp5_column = {
     MmxColumns.WIND_DIRECTION: lambda column: column.replace(converter_wind_dir_dict_rp5),
     MmxColumns.CLOUDINESS: lambda column: column.replace(converter_cloudiness_dict_rp5),
     MmxColumns.PRECIPITATION_CODE: lambda column: column.replace(converter_precip_code_dict_rp5),
     MmxColumns.PRECIPITATION_INTENSITY: lambda column: pd.to_numeric(column.replace(converter_precip_count_dict_rp5)),
     MmxColumns.VISIBILITY: lambda column: column * 1000
 }
+
+mapper_converter_to_mm94_column = {
+    MmxColumns.AIR_TEMPERATURE: lambda column: column / 10,
+    MmxColumns.ROAD_TEMPERATURE: lambda column: column / 10,
+    MmxColumns.UNDERGROUND_TEMPERATURE: lambda column: column / 10,
+    MmxColumns.HUMIDITY: lambda column: column / 10,
+    MmxColumns.WIND_SPEED: lambda column: column / 10,
+    MmxColumns.WIND_MAX_SPEED: lambda column: column / 10,
+    MmxColumns.WIND_DIRECTION: lambda column: column / 10,
+    MmxColumns.PRECIPITATION_CODE: lambda column: column * 10,
+    MmxColumns.PRECIPITATION_INTENSITY: lambda column: column / 10,
+    MmxColumns.FREEZING_POINT: lambda column: column / 10,
+    MmxColumns.DEW_POINT_TEMPERATURE: lambda column: column / 10,
+    MmxColumns.SALINITY: lambda column: column / 10,
+    MmxColumns.PRESSURE: lambda column: column / 10,
+    MmxColumns.VISIBILITY: lambda column: column / 10,
+    MmxColumns.CLOUDINESS: lambda column: column * 10,
+}
+
 
