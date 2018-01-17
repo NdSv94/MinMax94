@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from constants import MmxColumns
-from constants import mapper_converter_to_mm94_column
+from constants import mapper_converter_to_mmx_column
 
 def set_onelevel(df):
     df_return = deepcopy(df)
-    df_return.columns = ['_'.join(col).strip() if col not in (('date_time_utc', ''), (MmxColumns.STATION_ID, ''), ('date_time_local', ''))
-                     else ''.join(col).strip()
-                     for col in df.columns.values]
+    df_return.columns = ['_'.join(col).strip()
+                        if col not in ((MmxColumns.DATE_TIME_UTC, ''), (MmxColumns.STATION_ID, ''), (MmxColumns.DATE_TIME_LOCAL, ''))
+                        else ''.join(col).strip() for col in df.columns.values]
     return df_return
 
 
@@ -53,8 +53,7 @@ class Preprocessor():
 
         def utc_time(df, station_id):
             timezone = station_def['timezone'][station_def[MmxColumns.STATION_ID] == station_id].values[0]
-            df['date_time_utc'] = df['date_time'] - pd.Timedelta(str(timezone) + 'h')
-            df = df.rename(columns={'date_time': 'date_time_local'})
+            df[MmxColumns.DATE_TIME_UTC] = df[MmxColumns.DATE_TIME_LOCAL] - pd.Timedelta(str(timezone) + 'h')
             return df
 
         df_with_utc = df_raw.groupby(MmxColumns.STATION_ID).apply(lambda df: utc_time(df, df.name))
@@ -62,7 +61,7 @@ class Preprocessor():
 
     def PivotTable(self, df):
         upper_columns = [col for col in df.columns if col in ('data', 'id', 'valid')]
-        df_pivoted = df.pivot_table(index=[MmxColumns.STATION_ID, 'date_time_utc', 'date_time_local'], columns='type', values=upper_columns)
+        df_pivoted = df.pivot_table(index=[MmxColumns.STATION_ID, MmxColumns.DATE_TIME_UTC, MmxColumns.DATE_TIME_LOCAL], columns='type', values=upper_columns)
         df_pivoted = df_pivoted.reset_index()
         df_pivoted.columns.names = [None] * len(df_pivoted.columns.names)
         df_pivoted = set_onelevel(df_pivoted)
@@ -74,10 +73,10 @@ class Preprocessor():
                                            df_pivoted[(MmxColumns.PRESSURE)] * 10, df_pivoted[(MmxColumns.PRESSURE)])
         return df_pivoted
 
-    def ConvertDataToMM94(self, df):
-        for key in mapper_converter_to_mm94_column.keys():
-            if key in df.columns:
-                df[key] = mapper_converter_to_mm94_column[key](df[key])
+    def ConvertDataToMmx(self, df):
+        for column in df.columns:
+            if column in mapper_converter_to_mmx_column.keys():
+                df[column] = mapper_converter_to_mmx_column[column](df)
         return df
 
 
@@ -93,37 +92,35 @@ class Preprocessor():
         id_columns = [column for column in df_patterns.columns if column.startswith('id_')]
         data_columns = [column for column in df_patterns.columns if column.startswith('data_')]
 
-        data_integer_columns = [column for column in data_columns if column in ('data_cloudiness', 'data_precip_code')]
+        data_integer_columns = [column for column in data_columns if column
+                                in (MmxColumns.PRECIPITATION_CODE, )]
         data_continuous_columns = [column for column in data_columns if column not in data_integer_columns]
 
         def interpolate(df):
 
             df_result = deepcopy(df)
-            df_result = df_result.set_index('date_time_utc')
+            df_result = df_result.set_index(MmxColumns.DATE_TIME_UTC)
             df_result['interpol'] = False
 
             # create table with rounded date_time
             start = df_result.index.min().round('30min')
             end = df_result.index.max().round('30min')
 
-            start_loc = df_result.date_time_local.min().round('30min')
-            end_loc = df_result.date_time_local.max().round('30min')
+            start_loc = df_result.date_time.min().round('30min')
+            end_loc = df_result.date_time.max().round('30min')
 
-            df_add = pd.DataFrame(index=pd.date_range(start, end, freq='30min', name='date_time_utc'))
+            df_add = pd.DataFrame(index=pd.date_range(start, end, freq='30min', name=MmxColumns.DATE_TIME_UTC))
             df_add['interpol'] = True
-            df_add['date_time_local'] = pd.date_range(start_loc, end_loc, freq='30min', name='date_time_local')
+            df_add[MmxColumns.DATE_TIME_LOCAL] = pd.date_range(start_loc, end_loc, freq='30min', name=MmxColumns.DATE_TIME_LOCAL)
             df_add[MmxColumns.STATION_ID] = df_result[MmxColumns.STATION_ID].unique()[0]
 
-            df_result = df_result.merge(df_add, how='outer', on=[MmxColumns.STATION_ID, 'interpol', 'date_time_local'], left_index=True,
+            df_result = df_result.merge(df_add, how='outer', on=[MmxColumns.STATION_ID, 'interpol', MmxColumns.DATE_TIME_LOCAL], left_index=True,
                                         right_index=True, sort=True)
 
             for column in data_continuous_columns:
                 df_result[column] = df_result[column].interpolate(method='linear', limit_directiom='both', limit=6)
 
             for column in data_integer_columns:
-                if column == MmxColumns.CLOUDINESS:
-                    df_result[column] = df_result[column].interpolate(method='linear', limit_directiom='both', limit=6).round()
-
                 if column == MmxColumns.PRECIPITATION_CODE:
                     df_result[column] = df_result[column].interpolate(method='nearest', limit_directiom='both', limit=6)
 
@@ -137,5 +134,5 @@ class Preprocessor():
             df_result = df_result.reset_index()
             return df_result
 
-        df_interpolated = df_patterns.groupby(MmxColumns.STATION_ID).apply(interpolate).reset_index(level=MmxColumns.STATION_ID, drop=True)
+        df_interpolated = df_patterns.groupby([pd.Grouper(MmxColumns.STATION_ID)]).apply(interpolate).reset_index(level=MmxColumns.STATION_ID, drop=True)
         return df_interpolated
