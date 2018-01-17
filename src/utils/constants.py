@@ -36,6 +36,34 @@ class RP5Columns:
     DATE_TIME_LOCAL = 'Местное время'
 
 
+class RawColumns:
+    """
+    Abbreviations from minimax system
+    """
+    AIR_TEMPERATURE = 't_air'
+    ROAD_TEMPERATURE = 't_road'
+    UNDERGROUND_TEMPERATURE = 't_underroad'
+    HUMIDITY = 'dampness'
+    WIND_SPEED = 'wind_velocity'
+    WIND_MAX_SPEED = 'wind_speedmax'
+    WIND_DIRECTION = 'wind_dir'
+    PRECIPITATION_CODE = 'precip_code'
+    PRECIPITATION_INTENSITY = 'precip_count'
+    PRECIPITATION_INTERVAL = 'precip_interval'
+    FREEZING_POINT = 'freezing_point'
+    DEW_POINT_TEMPERATURE = 'dew_point'
+    SALINITY = 'salinity'
+    PRESSURE = 'pressure'
+    VISIBILITY = 'visibility'
+    P_WEATHER = 'p_weather'
+    CLOUDINESS = 'cloudiness'
+    STATION_ID = 'station_id'
+    DATE_TIME_LOCAL = 'date_time'
+    DATE_TIME_UTC = 'date_time_utc'
+
+
+
+
 class MmxColumns:
     """
     Abbreviations from minimax system
@@ -60,6 +88,23 @@ class MmxColumns:
     STATION_ID = 'station_id'
     DATE_TIME_LOCAL = 'date_time'
     DATE_TIME_UTC = 'date_time_utc'
+    ID_AIR_TEMPERATURE = 'id_t_air'
+    ID_ROAD_TEMPERATURE = 'id_t_road'
+    ID_UNDERGROUND_TEMPERATURE = 'id_t_underroad'
+    ID_HUMIDITY = 'id_dampness'
+    ID_WIND_SPEED = 'id_wind_velocity'
+    ID_WIND_MAX_SPEED = 'id_wind_speedmax'
+    ID_WIND_DIRECTION = 'id_wind_dir'
+    ID_PRECIPITATION_CODE = 'id_precip_code'
+    ID_PRECIPITATION_INTENSITY = 'id_precip_count'
+    ID_PRECIPITATION_INTERVAL = 'id_precip_interval'
+    ID_FREEZING_POINT = 'id_freezing_point'
+    ID_DEW_POINT_TEMPERATURE = 'id_dew_point'
+    ID_SALINITY = 'id_salinity'
+    ID_PRESSURE = 'id_pressure'
+    ID_VISIBILITY = 'id_visibility'
+    ID_P_WEATHER = 'id_p_weather'
+    ID_CLOUDINESS = 'id_cloudiness'
 
 class MetroColumns:
     """
@@ -92,7 +137,7 @@ class MmxPrecipitationCode:
     RAIN_AND_SNOW = 30
     HEAVY_SNOW = 40
 
-mapper_columns_rp5_to_mmx = {
+field_converter_rp5_to_mmx = {
     RP5Columns.AIR_TEMPERATURE: MmxColumns.AIR_TEMPERATURE,
     RP5Columns.PRESSURE: MmxColumns.PRESSURE,
     RP5Columns.HUMIDITY: MmxColumns.HUMIDITY,
@@ -107,10 +152,11 @@ mapper_columns_rp5_to_mmx = {
     RP5Columns.PRECIPITATION_CODE: MmxColumns.PRECIPITATION_CODE,
     RP5Columns.P_WEATHER: MmxColumns.P_WEATHER,
     RP5Columns.DATE_TIME_LOCAL: MmxColumns.DATE_TIME_LOCAL
-
 }
 
-mapper_columns_mmx_to_metro = {
+field_converter_raw_to_mmx = {}
+
+field_converter_mmx_to_metro = {
     MmxColumns.AIR_TEMPERATURE: MetroColumns.AIR_TEMPERATURE,
     MmxColumns.PRESSURE: MetroColumns.PRESSURE,
     MmxColumns.HUMIDITY: MetroColumns.HUMIDITY,
@@ -176,23 +222,37 @@ converter_precip_code_dict_rp5 = {
 }
 
 converter_precip_count_dict_rp5 = {
-    np.nan:    np.nan,
     "Осадков нет": 0,
     "Следы осадков": 0.05
     }
 
-mapper_converter_to_rp5_column = {
+converter_visibility_dict_rp5 = {
+    "менее 0.05": 0.05,
+    "менее 0.1": 0.1
+}
+
+def rp5_datetime_to_mmx_format(datetime_rp5):
+    date, time = datetime_rp5.split(' ')
+    date = '-'.join(date.split('.')[::-1])
+    time = time + ':00'
+    datetime_standard = date + ' ' + time
+    return datetime_standard
+
+def mmx_datetime_to_metro_format(date_time):
+    return str(date_time).rsplit(":", maxsplit=1)[0] + ' UTC'
+
+data_converter_rp5_to_mmx = {
     MmxColumns.WIND_DIRECTION: lambda df: df[MmxColumns.WIND_DIRECTION].replace(converter_wind_dir_dict_rp5),
     MmxColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS].replace(converter_cloudiness_dict_rp5),
     MmxColumns.PRECIPITATION_CODE: lambda df: df[MmxColumns.PRECIPITATION_CODE].replace(converter_precip_code_dict_rp5),
     MmxColumns.PRECIPITATION_INTENSITY:
         lambda df: pd.to_numeric(df[MmxColumns.PRECIPITATION_INTENSITY].replace(converter_precip_count_dict_rp5)) / \
                    df[MmxColumns.PRECIPITATION_INTERVAL],
-    MmxColumns.VISIBILITY: lambda df: df[MmxColumns.VISIBILITY] * 1000,
-
+    MmxColumns.VISIBILITY: lambda df: 1000 * pd.to_numeric(df[MmxColumns.VISIBILITY].replace(converter_visibility_dict_rp5)),
+    MmxColumns.DATE_TIME_LOCAL: lambda df: pd.to_datetime(df[MmxColumns.DATE_TIME_LOCAL].apply(rp5_datetime_to_mmx_format))
 }
 
-mapper_converter_to_mmx_column = {
+data_converter_raw_to_mmx = {
     MmxColumns.AIR_TEMPERATURE: lambda df: df[MmxColumns.AIR_TEMPERATURE] / 10,
     MmxColumns.ROAD_TEMPERATURE: lambda df: df[MmxColumns.ROAD_TEMPERATURE] / 10,
     MmxColumns.UNDERGROUND_TEMPERATURE: lambda df: df[MmxColumns.UNDERGROUND_TEMPERATURE] / 10,
@@ -205,7 +265,8 @@ mapper_converter_to_mmx_column = {
     MmxColumns.FREEZING_POINT: lambda df: df[MmxColumns.FREEZING_POINT] / 10,
     MmxColumns.DEW_POINT_TEMPERATURE: lambda df: df[MmxColumns.DEW_POINT_TEMPERATURE] / 10,
     MmxColumns.SALINITY: lambda df: df[MmxColumns.SALINITY] / 10,
-    MmxColumns.PRESSURE: lambda df: df[MmxColumns.PRESSURE] / 10,
+    MmxColumns.PRESSURE: lambda df:  np.where((df[MmxColumns.PRESSURE] > 700) & (df[(MmxColumns.PRESSURE)] < 800),
+                                           df[(MmxColumns.PRESSURE)] * 10, df[(MmxColumns.PRESSURE)]) / 10,
     MmxColumns.VISIBILITY: lambda df: df[MmxColumns.VISIBILITY] / 10,
     MmxColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS] * 10,
 }

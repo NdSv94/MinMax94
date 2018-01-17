@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from constants import MmxColumns
-from constants import mapper_converter_to_mmx_column
+from constants import field_converter_rp5_to_mmx, data_converter_rp5_to_mmx
+from constants import field_converter_raw_to_mmx, data_converter_raw_to_mmx
 
 def set_onelevel(df):
     df_return = deepcopy(df)
@@ -37,6 +38,16 @@ def set_multilevel(df):
         ret[column] = df['{0}'.format(column)]
     ret.rename(columns={'total': 'total_indices'}, inplace=True)
     return ret
+
+def convert_data(df, data_converter_dict):
+    for column in df.columns:
+        if column in data_converter_dict.keys():
+            df[column] = data_converter_dict[column](df)
+    return df
+
+def rename_fields(df, field_converter_dict):
+    df = df.rename(columns=field_converter_dict)
+    return df
 #--------------------------------------------------------------------------
 
 class Preprocessor():
@@ -46,6 +57,33 @@ class Preprocessor():
 
     def SelectFeatures(self, df, features):
         return df[df['type'].isin(features)]
+
+    def PivotTable(self, df):
+        upper_columns = [col for col in df.columns if col in ('data', 'id', 'valid')]
+        df_pivoted = df.pivot_table(index=[MmxColumns.STATION_ID, MmxColumns.DATE_TIME_LOCAL], columns='type', values=upper_columns)
+        df_pivoted = df_pivoted.reset_index()
+        df_pivoted.columns.names = [None] * len(df_pivoted.columns.names)
+        df_pivoted = set_onelevel(df_pivoted)
+        return df_pivoted
+
+    def ConvertData(self, df, from_format='RP5', to_format='Mmx'):
+        if ((from_format == 'RP5') and (to_format == 'Mmx')):
+            field_converter_dict = field_converter_rp5_to_mmx
+            data_converter_dict = data_converter_rp5_to_mmx
+        elif ((from_format == 'Raw') and (to_format == 'Mmx')):
+            field_converter_dict = {}
+            data_converter_dict = data_converter_raw_to_mmx
+        else:
+            raise ValueError("Converting from {0} to {1} format is not supported!".format(from_format, to_format))
+
+        df = rename_fields(df, field_converter_dict)
+        df = convert_data(df, data_converter_dict)
+
+        cols_to_use = [MmxColumns.__getattribute__(MmxColumns, attr) for attr in MmxColumns.__dict__.keys()
+                       if not attr.startswith('__')]
+        cols_to_use = [col for col in cols_to_use if col in df.columns]
+        df = df[cols_to_use]
+        return df
 
     def AddUTC(self, df_raw, station_def_path='/mnt/HARD/MinMax94/data/data_all/CSV/stations_mm94_def.csv'):
 
@@ -58,27 +96,6 @@ class Preprocessor():
 
         df_with_utc = df_raw.groupby(MmxColumns.STATION_ID).apply(lambda df: utc_time(df, df.name))
         return df_with_utc
-
-    def PivotTable(self, df):
-        upper_columns = [col for col in df.columns if col in ('data', 'id', 'valid')]
-        df_pivoted = df.pivot_table(index=[MmxColumns.STATION_ID, MmxColumns.DATE_TIME_UTC, MmxColumns.DATE_TIME_LOCAL], columns='type', values=upper_columns)
-        df_pivoted = df_pivoted.reset_index()
-        df_pivoted.columns.names = [None] * len(df_pivoted.columns.names)
-        df_pivoted = set_onelevel(df_pivoted)
-        return df_pivoted
-
-    def FixPressureScale(self, df_pivoted):
-        if MmxColumns.PRESSURE in df_pivoted.columns:
-            df_pivoted[MmxColumns.PRESSURE] = np.where((df_pivoted[MmxColumns.PRESSURE] > 700) & (df_pivoted[(MmxColumns.PRESSURE)] < 800),
-                                           df_pivoted[(MmxColumns.PRESSURE)] * 10, df_pivoted[(MmxColumns.PRESSURE)])
-        return df_pivoted
-
-    def ConvertDataToMmx(self, df):
-        for column in df.columns:
-            if column in mapper_converter_to_mmx_column.keys():
-                df[column] = mapper_converter_to_mmx_column[column](df)
-        return df
-
 
     def CreatePatternList(self, df_pivoted, max_gap=pd.Timedelta('2h'), min_length=pd.Timedelta('12h')):
         pattern_list = [g for _, g in df_pivoted.groupby([MmxColumns.STATION_ID, (df_pivoted.date_time_utc.diff() > max_gap).cumsum()])

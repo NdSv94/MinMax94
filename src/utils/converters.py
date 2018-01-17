@@ -1,62 +1,29 @@
 import pandas as pd
 from copy import deepcopy
-from constants import mapper_columns_rp5_to_mmx, RP5Columns, mapper_converter_to_rp5_column, MmxColumns
+from constants import field_converter_rp5_to_mmx, RP5Columns, data_converter_rp5_to_mmx, MmxColumns
 
-def rp5_datetime_to_mmx_format(datetime_rp5):
-    date, time = datetime_rp5.split(' ')
-    date = '-'.join(date.split('.')[::-1])
-    time = time + ':00'
-    datetime_standard = date + ' ' + time
-    return datetime_standard
-
-def mmx_datetime_to_metro_format(date_time):
-    return str(date_time).rsplit(":", maxsplit=1)[0] + ' UTC'
-
-def rename_columns_rp5_to_mmx(df_rp5):
-    renaming_columns_dict = deepcopy(mapper_columns_rp5_to_mmx)
-
-    cols_to_use = [RP5Columns.__getattribute__(RP5Columns, attr) for attr in RP5Columns.__dict__.keys()
-                   if not attr.startswith('_')]
-    df_rp5 = df_rp5[cols_to_use]
-    df_rp5 = df_rp5.rename(columns=renaming_columns_dict)
-    return df_rp5
-
-def convert_rp5_to_mmx(df_rp5):
-
-    df = deepcopy(df_rp5)
-
-    # rename columns
-    df = rename_columns_rp5_to_mmx(df)
-
-    # convert date_time to Timestamp format
-    df['date_time'] = pd.to_datetime(df['date_time'].apply(rp5_datetime_to_mmx_format))
-
-    # convert rp5 values to mmx
+def convert_data(df, data_converter_dict):
     for column in df.columns:
-        if column in mapper_converter_to_rp5_column.keys():
-            df[column] = mapper_converter_to_rp5_column[column](df)
-
-    # sort by date_time
-    df = df.groupby(MmxColumns.STATION_ID).apply(lambda x: x.sort_values('date_time')).reset_index(drop=True)
-
+        if column in data_converter_dict.keys():
+            df[column] = data_converter_dict[column](df)
     return df
 
-def convert_mmx_to_metro(df_mmx):
+def rename_fields(df, field_converter_dict):
+    df = df.rename(columns=field_converter_dict)
+    return df
 
-    df = deepcopy(df_mmx)
+def convert_format(df, from_format='RP5', to_format='Mmx'):
 
-    # rename columns
-    df = rename_columns_rp5_to_mmx(df)
+    if ((from_format=='RP5') and (to_format=='Mmx')):
+        field_converter_dict = field_converter_rp5_to_mmx
+        data_converter_dict = data_converter_rp5_to_mmx
+    else: raise ValueError("Convertating from {0} to {1} format is not supported!")
 
-    # convert date_time to Timestamp format
-    df['date_time'] = pd.to_datetime(df['date_time'].apply(rp5_datetime_to_mmx_format))
+    df = rename_fields(df, field_converter_dict)
+    df = convert_data(df, data_converter_dict)
 
-    # convert rp5 values to mmx
-    for column in df.columns:
-        if column in mapper_converter_to_rp5_column.keys():
-            df[column] = mapper_converter_to_rp5_column[column](df)
-
-    # sort by date_time
-    df = df.groupby(MmxColumns.STATION_ID).apply(lambda x: x.sort_values('date_time')).reset_index(drop=True)
-
+    cols_to_use = [MmxColumns.__getattribute__(MmxColumns, attr) for attr in MmxColumns.__dict__.keys()
+                   if not attr.startswith('__')]
+    cols_to_use = [col for col in cols_to_use if col in df.columns]
+    df = df[cols_to_use]
     return df
