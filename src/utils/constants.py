@@ -211,6 +211,8 @@ converter_precip_code_dict_rp5 = {
     " и половину или менее в течение другой части периода.": MmxPrecipitationCode.DRY,
     "Облака покрывали половину неба или менее в течение всего соответствующего периода.": MmxPrecipitationCode.DRY,
     "Туман или ледяной туман или сильная мгла.": MmxPrecipitationCode.DRY,
+    "Никаких особых явлений погоды не наблюдалось.": MmxPrecipitationCode.DRY,
+    "Буря": MmxPrecipitationCode.DRY,
 
     "Гроза (грозы) с осадками или без них.": MmxPrecipitationCode.RAIN,
     "Морось.": MmxPrecipitationCode.RAIN,
@@ -243,8 +245,8 @@ def mmx_datetime_to_metro_format(date_time):
 
 data_converter_rp5_to_mmx = {
     MmxColumns.WIND_DIRECTION: lambda df: df[MmxColumns.WIND_DIRECTION].replace(converter_wind_dir_dict_rp5),
-    MmxColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS].replace(converter_cloudiness_dict_rp5),
-    MmxColumns.PRECIPITATION_CODE: lambda df: df[MmxColumns.PRECIPITATION_CODE].replace(converter_precip_code_dict_rp5),
+    MmxColumns.CLOUDINESS: lambda df: pd.to_numeric(df[MmxColumns.CLOUDINESS].replace(converter_cloudiness_dict_rp5)),
+    MmxColumns.PRECIPITATION_CODE: lambda df: pd.to_numeric(df[MmxColumns.PRECIPITATION_CODE].replace(converter_precip_code_dict_rp5)),
     MmxColumns.PRECIPITATION_INTENSITY:
         lambda df: pd.to_numeric(df[MmxColumns.PRECIPITATION_INTENSITY].replace(converter_precip_count_dict_rp5)) / \
                    df[MmxColumns.PRECIPITATION_INTERVAL],
