@@ -4,6 +4,10 @@ import pandas as pd
 FORECAST_HOURS_BEFORE_PREDICTION = 3
 FORECAST_HOURS_AFTER_PREDICTION = 48
 
+available_meteo_parameters = ['t_air', 't_road', 't_underroad', 'dampness', 'wind_velocity', 'wind_speedmax',
+                    'wind_dir', 'precip_code', 'precip_count', 'precip_interval', 'freezing_point',
+                    'dew_point', 'salinity', 'pressure', 'visibility', 'p_weather', 'cloudiness']
+
 RUSSIAN_TIME_ZONES = {
     2: 'USZ1',
     3: 'MSK',
@@ -61,9 +65,6 @@ class RawColumns:
     DATE_TIME_LOCAL = 'date_time'
     DATE_TIME_UTC = 'date_time_utc'
 
-
-
-
 class MmxColumns:
     """
     Abbreviations from minimax system
@@ -85,9 +86,11 @@ class MmxColumns:
     VISIBILITY = 'data_visibility'
     P_WEATHER = 'data_p_weather'
     CLOUDINESS = 'data_cloudiness'
+
     STATION_ID = 'station_id'
     DATE_TIME_LOCAL = 'date_time'
     DATE_TIME_UTC = 'date_time_utc'
+
     ID_AIR_TEMPERATURE = 'id_t_air'
     ID_ROAD_TEMPERATURE = 'id_t_road'
     ID_UNDERGROUND_TEMPERATURE = 'id_t_underroad'
@@ -126,6 +129,11 @@ class MetroColumns:
     VISIBILITY = 'visibility' #
     P_WEATHER = 'p_weather' #
     CLOUDINESS = 'cloudiness'
+    DATE_TIME_UTC = 'date_time_utc'
+    DATE_TIME_METRO = 'date_time_metro'
+    STATION_ID = 'station_id'
+    ROAD_TEMPERATURE = 't_road'
+    UNDERGROUND_TEMPERATURE = 't_underroad'
 
 class MmxPrecipitationCode:
     """
@@ -158,17 +166,19 @@ field_converter_raw_to_mmx = {}
 
 field_converter_mmx_to_metro = {
     MmxColumns.AIR_TEMPERATURE: MetroColumns.AIR_TEMPERATURE,
-    MmxColumns.PRESSURE: MetroColumns.PRESSURE,
+    MmxColumns.DEW_POINT_TEMPERATURE: MetroColumns.DEW_POINT_TEMPERATURE,
     MmxColumns.HUMIDITY: MetroColumns.HUMIDITY,
-    MmxColumns.WIND_DIRECTION: MetroColumns.WIND_DIRECTION,
     MmxColumns.WIND_SPEED: MetroColumns.WIND_SPEED,
+    MmxColumns.WIND_DIRECTION: MetroColumns.WIND_DIRECTION,
     MmxColumns.WIND_MAX_SPEED: MetroColumns.WIND_MAX_SPEED,
+    MmxColumns.PRECIPITATION_INTENSITY: MetroColumns.PRECIPITATION_INTENSITY,
+    MmxColumns.PRECIPITATION_CODE: MetroColumns.PRECIPITATION_CODE,
+    MmxColumns.P_WEATHER: MetroColumns.P_WEATHER,
+    MmxColumns.PRESSURE: MetroColumns.PRESSURE,
     MmxColumns.CLOUDINESS: MetroColumns.CLOUDINESS,
     MmxColumns.VISIBILITY: MetroColumns.VISIBILITY,
-    MmxColumns.DEW_POINT_TEMPERATURE: MetroColumns.DEW_POINT_TEMPERATURE,
-    MmxColumns.PRECIPITATION_INTENSITY: MetroColumns.PRECIPITATION_INTENSITY,  # quantity of precipitation (mm)
-    MmxColumns.PRECIPITATION_CODE: MetroColumns.PRECIPITATION_CODE,
-    MmxColumns.P_WEATHER: MetroColumns.P_WEATHER
+    MmxColumns.ROAD_TEMPERATURE: MetroColumns.ROAD_TEMPERATURE,
+    MmxColumns.UNDERGROUND_TEMPERATURE: MetroColumns.UNDERGROUND_TEMPERATURE
 }
 
 converter_wind_dir_dict_rp5 = {
@@ -251,7 +261,8 @@ data_converter_rp5_to_mmx = {
         lambda df: pd.to_numeric(df[MmxColumns.PRECIPITATION_INTENSITY].replace(converter_precip_count_dict_rp5)) / \
                    df[MmxColumns.PRECIPITATION_INTERVAL],
     MmxColumns.VISIBILITY: lambda df: 1000 * pd.to_numeric(df[MmxColumns.VISIBILITY].replace(converter_visibility_dict_rp5)),
-    MmxColumns.DATE_TIME_LOCAL: lambda df: pd.to_datetime(df[MmxColumns.DATE_TIME_LOCAL].apply(rp5_datetime_to_mmx_format))
+    MmxColumns.DATE_TIME_LOCAL: lambda df: pd.to_datetime(df[MmxColumns.DATE_TIME_LOCAL].apply(rp5_datetime_to_mmx_format)),
+
 }
 
 data_converter_raw_to_mmx = {
@@ -273,4 +284,5 @@ data_converter_raw_to_mmx = {
     MmxColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS] * 10,
 }
 
+data_converter_mmx_to_metro = {}
 

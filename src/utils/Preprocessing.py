@@ -1,9 +1,24 @@
 import numpy as np
 import pandas as pd
+import geopy.distance
 from copy import deepcopy
-from constants import MmxColumns
+import datetime
+import pytz
+from tzwhere import tzwhere
+from constants import MmxColumns, MetroColumns, available_meteo_parameters
 from constants import field_converter_rp5_to_mmx, data_converter_rp5_to_mmx
 from constants import field_converter_raw_to_mmx, data_converter_raw_to_mmx
+from constants import field_converter_mmx_to_metro, data_converter_mmx_to_metro
+from constants import mmx_datetime_to_metro_format
+
+def hours_from_utc(lat, lon):
+    tzwh = tzwhere.tzwhere()
+    timezone_str = tzwh.tzNameAt(lat, lon) # Seville coordinates
+
+    timezone_now = pytz.timezone(timezone_str)
+    hours_from_utc = datetime.datetime.now(timezone_now).utcoffset().total_seconds()/60/60
+    return hours_from_utc
+
 
 def set_onelevel(df):
     df_return = deepcopy(df)
@@ -11,33 +26,6 @@ def set_onelevel(df):
                         if col not in ((MmxColumns.DATE_TIME_UTC, ''), (MmxColumns.STATION_ID, ''), (MmxColumns.DATE_TIME_LOCAL, ''))
                         else ''.join(col).strip() for col in df.columns.values]
     return df_return
-
-
-def set_multilevel(df):
-    groups = set()
-    sensors = set()
-    others = set()
-    for column in df.columns:
-
-        if column in (MmxColumns.STATION_ID, 'date_time', 'upper_t_road', 'lower_t_road'):
-            others.add(column)
-        else:
-            (group, sensor) = column.split('_', 1)
-            groups.add(group)
-            sensors.add(sensor)
-
-    columns = [(group, sensor) for group in groups for sensor in sensors
-               if not ((group in ('id', 'valid')) and (sensor in ('azimuth', 'altitude')))]
-
-    columns = pd.MultiIndex.from_tuples(columns)
-    ret = pd.DataFrame(columns=columns)
-
-    for column in columns:
-        ret[column] = df['{0}_{1}'.format(column[0], column[1])]
-    for column in others:
-        ret[column] = df['{0}'.format(column)]
-    ret.rename(columns={'total': 'total_indices'}, inplace=True)
-    return ret
 
 def convert_data(df, data_converter_dict):
     for column in df.columns:
@@ -48,6 +36,10 @@ def convert_data(df, data_converter_dict):
 def rename_fields(df, field_converter_dict):
     df = df.rename(columns=field_converter_dict)
     return df
+
+def vincenty_dist(point_1, point_2):
+    """point = tuple(lat, long)"""
+    return geopy.distance.vincenty(point_1, point_2).km
 #--------------------------------------------------------------------------
 
 class Preprocessor():
@@ -55,7 +47,9 @@ class Preprocessor():
     def __init__(self):
         pass
 
-    def SelectFeatures(self, df, features):
+    def SelectFeatures(self, df, features='all'):
+        if features == 'all':
+            features = available_meteo_parameters
         return df[df['type'].isin(features)]
 
     def PivotTable(self, df):
@@ -70,17 +64,27 @@ class Preprocessor():
         if ((from_format == 'RP5') and (to_format == 'Mmx')):
             field_converter_dict = field_converter_rp5_to_mmx
             data_converter_dict = data_converter_rp5_to_mmx
+            cols_to_use = [MmxColumns.__getattribute__(MmxColumns, attr) for attr in MmxColumns.__dict__.keys()
+                           if not attr.startswith('__')]
         elif ((from_format == 'Raw') and (to_format == 'Mmx')):
             field_converter_dict = {}
             data_converter_dict = data_converter_raw_to_mmx
+            cols_to_use = [MmxColumns.__getattribute__(MmxColumns, attr) for attr in MmxColumns.__dict__.keys()
+                           if not attr.startswith('__')]
+        elif ((from_format == 'Mmx') and (to_format == 'Metro')):
+            field_converter_dict = field_converter_mmx_to_metro
+            data_converter_dict = data_converter_mmx_to_metro
+            cols_to_use = [MetroColumns.__getattribute__(MetroColumns, attr) for attr in MetroColumns.__dict__.keys()
+                           if not attr.startswith('__')]
         else:
             raise ValueError("Converting from {0} to {1} format is not supported!".format(from_format, to_format))
 
         df = rename_fields(df, field_converter_dict)
         df = convert_data(df, data_converter_dict)
 
-        cols_to_use = [MmxColumns.__getattribute__(MmxColumns, attr) for attr in MmxColumns.__dict__.keys()
-                       if not attr.startswith('__')]
+        if ((from_format == 'Mmx') and (to_format == 'Metro')):
+            df[MetroColumns.DATE_TIME_METRO] = df[MetroColumns.DATE_TIME_UTC].apply(mmx_datetime_to_metro_format)
+
         cols_to_use = [col for col in cols_to_use if col in df.columns]
         df = df[cols_to_use]
         return df
