@@ -132,8 +132,6 @@ class MetroColumns:
     DATE_TIME_UTC = 'date_time_utc'
     DATE_TIME_METRO = 'date_time_metro'
     STATION_ID = 'station_id'
-    ROAD_TEMPERATURE = 't_road'
-    UNDERGROUND_TEMPERATURE = 't_underroad'
 
 class MmxPrecipitationCode:
     """
@@ -284,5 +282,22 @@ data_converter_raw_to_mmx = {
     MmxColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS] * 10,
 }
 
-data_converter_mmx_to_metro = {}
+data_converter_mmx_to_metro = {
+    MetroColumns.AIR_TEMPERATURE: lambda df: df[MetroColumns.AIR_TEMPERATURE].round(1),
+    MetroColumns.ROAD_TEMPERATURE: lambda df: df[MetroColumns.ROAD_TEMPERATURE].round(1),
+    MetroColumns.UNDERGROUND_TEMPERATURE: lambda df: df[MetroColumns.UNDERGROUND_TEMPERATURE].round(1),
+    MetroColumns.HUMIDITY: lambda df: df[MetroColumns.HUMIDITY].round(1),
+    MetroColumns.WIND_SPEED: lambda df: df[MetroColumns.WIND_SPEED].round(1),
+    MetroColumns.WIND_MAX_SPEED: lambda df: df[MetroColumns.WIND_MAX_SPEED].round(1),
+    MetroColumns.WIND_DIRECTION: lambda df: df[MetroColumns.WIND_DIRECTION].round(1),
+    MetroColumns.PRECIPITATION_CODE: lambda df: df[MetroColumns.PRECIPITATION_CODE],
+    MetroColumns.PRECIPITATION_INTENSITY: lambda df: df[MetroColumns.PRECIPITATION_INTENSITY].round(1),
+    MetroColumns.FREEZING_POINT: lambda df: df[MetroColumns.FREEZING_POINT].round(1),
+    MetroColumns.DEW_POINT_TEMPERATURE: lambda df: df[MetroColumns.DEW_POINT_TEMPERATURE].round(1),
+    MetroColumns.SALINITY: lambda df: df[MetroColumns.SALINITY].round(1),
+    MetroColumns.PRESSURE: lambda df: df[MetroColumns.PRESSURE].round(1),
+    MetroColumns.VISIBILITY: lambda df: df[MetroColumns.VISIBILITY].round(1),
+    MetroColumns.P_WEATHER: lambda df: df[MetroColumns.P_WEATHER],
+    MetroColumns.CLOUDINESS: lambda df: df[MetroColumns.CLOUDINESS].round(-1)
+}
 

@@ -124,15 +124,15 @@ class Preprocessor():
             df_result['interpol'] = False
 
             # create table with rounded date_time
-            start = df_result.index.min().round('30min')
-            end = df_result.index.max().round('30min')
+            start = df_result.index.min().round('1h')
+            end = df_result.index.max().round('1h')
 
-            start_loc = df_result.date_time.min().round('30min')
-            end_loc = df_result.date_time.max().round('30min')
+            start_loc = df_result.date_time.min().round('1h')
+            end_loc = df_result.date_time.max().round('1h')
 
-            df_add = pd.DataFrame(index=pd.date_range(start, end, freq='30min', name=MmxColumns.DATE_TIME_UTC))
+            df_add = pd.DataFrame(index=pd.date_range(start, end, freq='1h', name=MmxColumns.DATE_TIME_UTC))
             df_add['interpol'] = True
-            df_add[MmxColumns.DATE_TIME_LOCAL] = pd.date_range(start_loc, end_loc, freq='30min', name=MmxColumns.DATE_TIME_LOCAL)
+            df_add[MmxColumns.DATE_TIME_LOCAL] = pd.date_range(start_loc, end_loc, freq='1h', name=MmxColumns.DATE_TIME_LOCAL)
             df_add[MmxColumns.STATION_ID] = df_result[MmxColumns.STATION_ID].unique()[0]
 
             df_result = df_result.merge(df_add, how='outer', on=[MmxColumns.STATION_ID, 'interpol', MmxColumns.DATE_TIME_LOCAL], left_index=True,
