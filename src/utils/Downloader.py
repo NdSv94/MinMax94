@@ -9,9 +9,9 @@ class ExtractorData():
 
 
     def ExtractFromFile(self, station_list, start, end,
-                        sensor_list=[1, 2, 3, 4, 16], path='./data_csv/full_raw.csv'):
+                        sensor_list=(1, 2, 3, 4, 16), path='./data_csv/full_raw.csv'):
         dateparse = pd.to_datetime
-        df = pd.read_csv(path, index_col=0, dtype = {'station_id': int, 'date_time': str},
+        df = pd.read_csv(path, index_col=0, dtype={'station_id': int, 'date_time': str},
                         date_parser = dateparse, parse_dates = ['date_time'])
 
         if station_list is not None:
@@ -28,7 +28,7 @@ class ExtractorData():
 
         return df.reset_index(drop=True)
 
-    def ExtractFromDB(self, station_list, start, end, sensor_list=[1, 2, 3, 4, 16],
+    def ExtractFromDB(self, station_list, start, end, sensor_list=(1, 2, 3, 4, 16),
                       db_connection='mysql://root:casper@127.0.0.1:3306/lmeteo3', limit=None):
 
         sql_query = 'select sensor_data.id as "id", station_data.station_id, date_time, ' + \

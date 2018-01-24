@@ -5,11 +5,11 @@ from copy import deepcopy
 import datetime
 import pytz
 from tzwhere import tzwhere
-from constants import MmxColumns, MetroColumns, available_meteo_parameters
-from constants import field_converter_rp5_to_mmx, data_converter_rp5_to_mmx
-from constants import field_converter_raw_to_mmx, data_converter_raw_to_mmx
-from constants import field_converter_mmx_to_metro, data_converter_mmx_to_metro
-from constants import mmx_datetime_to_metro_format
+#from constants import rp5_meteo_columns, , available_meteo_parameters
+#from constants import field_converter_rp5_to_mmx, data_converter_rp5_to_mmx
+#from constants import field_converter_raw_to_mmx, data_converter_raw_to_mmx
+#from constants import field_converter_mmx_to_metro, data_converter_mmx_to_metro
+#from constants import mmx_datetime_to_metro_format
 
 def hours_from_utc(lat, lon):
     tzwh = tzwhere.tzwhere()
@@ -60,7 +60,7 @@ class Preprocessor():
         df_pivoted = set_onelevel(df_pivoted)
         return df_pivoted
 
-    def ConvertData(self, df, from_format='RP5', to_format='Mmx'):
+    """def ConvertData(self, df, from_format='RP5', to_format='Mmx'):
         if ((from_format == 'RP5') and (to_format == 'Mmx')):
             field_converter_dict = field_converter_rp5_to_mmx
             data_converter_dict = data_converter_rp5_to_mmx
@@ -87,7 +87,7 @@ class Preprocessor():
 
         cols_to_use = [col for col in cols_to_use if col in df.columns]
         df = df[cols_to_use]
-        return df
+        return df """
 
     def AddUTC(self, df_raw, station_def_path='/mnt/HARD/MinMax94/data/data_all/CSV/stations_mm94_def.csv'):
 
