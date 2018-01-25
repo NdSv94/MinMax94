@@ -1,6 +1,8 @@
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
+data_directory = "/mnt/HARD/MinMax94/data/CSV"
+
 FORECAST_HOURS_BEFORE_PREDICTION = 3
 FORECAST_HOURS_AFTER_PREDICTION = 48
 
@@ -9,14 +11,14 @@ available_meteo_parameters = ['t_air', 't_road', 't_underroad', 'dampness', 'win
                               'dew_point', 'salinity', 'pressure', 'visibility', 'p_weather', 'cloudiness']
 
 RUSSIAN_TIME_ZONES = {
-    2:  'USZ1',
-    3:  'MSK',
-    4:  'SAMT',
-    8:  'IRKT',
-    5:  'YEKT',
-    6:  'OMSK',
-    7:  'KRAT',
-    9:  'YAKT',
+    2: 'USZ1',
+    3: 'MSK',
+    4: 'SAMT',
+    8: 'IRKT',
+    5: 'YEKT',
+    6: 'OMSK',
+    7: 'KRAT',
+    9: 'YAKT',
     10: 'VLAT',
     11: 'MAGT',
     12: 'PETT'
@@ -43,6 +45,7 @@ class RP5(DataFrameColumns):
     """
     Abbreviations from rp5.ru
     """
+
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -56,7 +59,7 @@ class RP5(DataFrameColumns):
         self.PRECIPITATION_CODE = 'W1'
         self.PRECIPITATION_INTENSITY = 'RRR'
         self.PRECIPITATION_INTERVAL = 'tR'
-        self.DEW_POINT_TEMPERATURE = 'Td'
+        self.DEW_POINT = 'Td'
         self.PRESSURE = 'P'
         self.VISIBILITY = 'VV'
         self.P_WEATHER = 'WW'
@@ -67,11 +70,11 @@ class Raw(DataFrameColumns):
     """
     Abbreviations from minimax system
     """
+
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
         self.DATE_TIME_LOCAL = 'date_time'
-        self.DATE_TIME_UTC = 'date_time_utc'
 
         self.AIR_TEMPERATURE = 'data_t_air'
         self.ROAD_TEMPERATURE = 'data_t_road'
@@ -83,7 +86,7 @@ class Raw(DataFrameColumns):
         self.PRECIPITATION_CODE = 'data_precip_code'
         self.PRECIPITATION_INTENSITY = 'data_precip_count'
         self.FREEZING_POINT = 'data_freezing_point'
-        self.DEW_POINT_TEMPERATURE = 'data_dew_point'
+        self.DEW_POINT = 'data_dew_point'
         self.SALINITY = 'data_salinity'
         self.PRESSURE = 'data_pressure'
         self.VISIBILITY = 'data_visibility'
@@ -101,7 +104,7 @@ class Raw(DataFrameColumns):
         self.ID_PRECIPITATION_INTENSITY = 'id_precip_count'
         self.ID_PRECIPITATION_INTERVAL = 'id_precip_interval'
         self.ID_FREEZING_POINT = 'id_freezing_point'
-        self.ID_DEW_POINT_TEMPERATURE = 'id_dew_point'
+        self.ID_DEW_POINT = 'id_dew_point'
         self.ID_SALINITY = 'id_salinity'
         self.ID_PRESSURE = 'id_pressure'
         self.ID_VISIBILITY = 'id_visibility'
@@ -113,6 +116,7 @@ class Mmx(DataFrameColumns):
     """
     Abbreviations from Skoltech system
     """
+
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -129,7 +133,7 @@ class Mmx(DataFrameColumns):
         self.PRECIPITATION_CODE = 'data_precip_code'
         self.PRECIPITATION_INTENSITY = 'data_precip_count'
         self.FREEZING_POINT = 'data_freezing_point'
-        self.DEW_POINT_TEMPERATURE = 'data_dew_point'
+        self.DEW_POINT = 'data_dew_point'
         self.SALINITY = 'data_salinity'
         self.PRESSURE = 'data_pressure'
         self.VISIBILITY = 'data_visibility'
@@ -147,7 +151,7 @@ class Mmx(DataFrameColumns):
         self.ID_PRECIPITATION_INTENSITY = 'id_precip_count'
         self.ID_PRECIPITATION_INTERVAL = 'id_precip_interval'
         self.ID_FREEZING_POINT = 'id_freezing_point'
-        self.ID_DEW_POINT_TEMPERATURE = 'id_dew_point'
+        self.ID_DEW_POINT = 'id_dew_point'
         self.ID_SALINITY = 'id_salinity'
         self.ID_PRESSURE = 'id_pressure'
         self.ID_VISIBILITY = 'id_visibility'
@@ -157,13 +161,14 @@ class Mmx(DataFrameColumns):
 
 class MmccRwis(DataFrameColumns):
     """
-    Abbreviations from mmcc system
+    Abbreviations from Mmcc system
     """
+
     def __init__(self):
         super().__init__()
+        self.STATION_ID = 'station_id'
         self.DATE_TIME_UTC = 'date_time_utc'
         self.DATE_TIME_METRO = 'date_time_metro'
-        self.STATION_ID = 'station_id'
 
         self.AIR_TEMPERATURE = 't_air'  #
         self.ROAD_TEMPERATURE = 't_road'  #
@@ -175,7 +180,7 @@ class MmccRwis(DataFrameColumns):
         self.PRECIPITATION_CODE = 'precipitation_type'  #
         self.PRECIPITATION_INTENSITY = 'precipitation_intensity'  #
         self.FREEZING_POINT = 'freezing_point'  #
-        self.DEW_POINT_TEMPERATURE = 't_dew_point'  #
+        self.DEW_POINT = 't_dew_point'  #
         self.SALINITY = 'salinity'  #
         self.PRESSURE = 'pressure'  #
         # VISIBILITY = 'visibility'
@@ -187,11 +192,12 @@ class MmccForecast(DataFrameColumns):
     """
     Abbreviations from mmcc system
     """
+
     def __init__(self):
         super().__init__()
+        self.STATION_ID = 'station_id'
         self.DATE_TIME_UTC = 'date_time_utc'
         self.DATE_TIME_METRO = 'date_time_metro'
-        self.STATION_ID = 'station_id'
 
         self.AIR_TEMPERATURE = 't_air'  #
         self.HUMIDITY = 'humidity'  #
@@ -199,7 +205,7 @@ class MmccForecast(DataFrameColumns):
         self.WIND_DIRECTION = 'wind_direction'  #
         self.PRECIPITATION_CODE = 'precipitation_type'  #
         self.PRECIPITATION_INTENSITY = 'precipitation_intensity'  #
-        self.DEW_POINT_TEMPERATURE = 't_dew_point'  #
+        self.DEW_POINT = 't_dew_point'  #
         self.PRESSURE = 'pressure'  #
         self.VISIBILITY = 'visibility'  #
         self.P_WEATHER = 'p_weather'  #
@@ -211,7 +217,6 @@ RawColumns = Raw()
 MmxColumns = Mmx()
 MmccRwisColumns = MmccRwis()
 MmccForecastColumns = MmccForecast()
-
 
 rp5_meteo_columns = RP5Columns.get_meteo_data_columns
 raw_meteo_columns = RawColumns.get_meteo_data_columns
@@ -257,7 +262,6 @@ map_wind_dir_rp5_to_mmx = {
     "Ветер, дующий с юго-юго-востока": 337.5
 }
 
-
 map_cloudiness_rp5_to_mmx = {
     "100%.": 100,
     "90  или более, но не 100%": 90,
@@ -270,7 +274,6 @@ map_cloudiness_rp5_to_mmx = {
     "Облаков нет.": 0,
     "Небо не видно из-за тумана и/или других метеорологических явлений.": np.nan
 }
-
 
 map_precip_code_rp5_to_mmx = {
     np.nan: MmxPrecipitationCode.DRY,
@@ -288,15 +291,32 @@ map_precip_code_rp5_to_mmx = {
     "Ливень (ливни).": MmxPrecipitationCode.RAIN,
     "Снег и/или другие виды твердых осадков": MmxPrecipitationCode.SNOW,
     "Дождь со снегом или другими видами твердых осадков": MmxPrecipitationCode.RAIN_AND_SNOW,
-    "Метель":  MmxPrecipitationCode.SNOW
+    "Метель": MmxPrecipitationCode.SNOW
 }
 
+map_p_weather_rp5_to_mmx = {
+    np.nan: 0,
+    "Облака покрывали более половины неба в течение всего соответствующего периода.": 0,
+    "Облака покрывали более половины неба в течение одной части соответствующего периода" +
+    " и половину или менее в течение другой части периода.": 0,
+    "Облака покрывали половину неба или менее в течение всего соответствующего периода.": 0,
+    "Туман или ледяной туман или сильная мгла.": 20,
+    "Никаких особых явлений погоды не наблюдалось.": 0,
+    "Буря": 30,
+
+    "Гроза (грозы) с осадками или без них.": 40,
+    "Морось.": 0,
+    "Дождь.": 0,
+    "Ливень (ливни).": 0,
+    "Снег и/или другие виды твердых осадков": 0,
+    "Дождь со снегом или другими видами твердых осадков": 0,
+    "Метель": 40
+}
 
 map_precip_count_rp5_to_mmx = {
     "Осадков нет": 0,
     "Следы осадков": 0.05
-    }
-
+}
 
 map_visibility_rp5_to_mmx = {
     "менее 0.05": 0.05,

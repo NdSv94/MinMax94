@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
 from copy import copy
-from constants import rp5_meteo_columns, raw_meteo_columns, mmx_meteo_columns, mmcc_meteo_columns
+from constants import rp5_meteo_columns, raw_meteo_columns, mmx_meteo_columns
 from constants import map_visibility_rp5_to_mmx, map_precip_count_rp5_to_mmx, \
                     map_precip_code_rp5_to_mmx, map_cloudiness_rp5_to_mmx, \
-                    map_wind_dir_rp5_to_mmx, mmx_meteo_columns, MmxColumns, RP5Columns, RawColumns
+                    map_wind_dir_rp5_to_mmx, mmx_meteo_columns, MmxColumns, RP5Columns, RawColumns, mmcc_rwis_meteo_columns, \
+                    MmccRwisColumns, MmccForecastColumns, mmcc_forecast_meteo_columns, map_p_weather_rp5_to_mmx, data_directory
 
 
 def rp5_datetime_to_mmx_format(datetime_rp5):
@@ -15,74 +16,61 @@ def rp5_datetime_to_mmx_format(datetime_rp5):
     return datetime_standard
 
 
-def mmx_datetime_to_metro_format(date_time):
+def mmx_datetime_to_mmcc_format(date_time):
     return str(date_time).rsplit(":", maxsplit=1)[0] + ' UTC'
 
 
-def add_utc(df_raw, station_def_path='/mnt/HARD/MinMax94/data/data_all/CSV/stations_mm94_def.csv'):
+def add_utc(df_raw, station_def_path=data_directory+'/stations_mm94_def.csv'):
+    df_1 = copy(df_raw)
     station_def = pd.read_csv(station_def_path)
 
     def utc_time(df, station_id):
         timezone = station_def['timezone'][station_def[MmxColumns.STATION_ID] == station_id].values[0]
-        df[MmxColumns.DATE_TIME_UTC] = pd.to_datetime(
-            df[MmxColumns.DATE_TIME_LOCAL] - pd.Timedelta(str(timezone) + 'h'))
+        df[MmxColumns.DATE_TIME_UTC] = pd.to_datetime(df[MmxColumns.DATE_TIME_LOCAL] - pd.Timedelta(str(timezone) + 'h'))
         return df
 
-    df_with_utc = df_raw.groupby(MmxColumns.STATION_ID).apply(lambda df: utc_time(df, df.name))
-    return df_with_utc
+    date_time_utc = df_1.groupby(MmxColumns.STATION_ID).apply(
+        lambda df: utc_time(df, df.name)[[MmxColumns.DATE_TIME_UTC]])
+    return date_time_utc
 
 
 def convert_rp5_to_mmx(df_rp5):
     df = copy(df_rp5)
-    df_mmx = pd.DataFrame(index=df.index, columns=mmx_meteo_columns)
 
-    # station_id column
+    columns_to_use = copy(mmx_meteo_columns)
+    columns_to_use.remove(MmxColumns.ROAD_TEMPERATURE)
+    columns_to_use.remove(MmxColumns.UNDERGROUND_TEMPERATURE)
+    columns_to_use.remove(MmxColumns.SALINITY)
+
+    df_mmx = pd.DataFrame(index=df.index, columns=columns_to_use)
+
     df_mmx[MmxColumns.STATION_ID] = df[RP5Columns.STATION_ID]
-
-    # date_time column
     df_mmx[MmxColumns.DATE_TIME_LOCAL] = pd.to_datetime(df[RP5Columns.DATE_TIME_LOCAL].
                                                         apply(rp5_datetime_to_mmx_format))
-
-    # wind_direction
+    df_mmx[MmxColumns.DATE_TIME_UTC] = add_utc(df_mmx, data_directory+'/stations_rp5_def.csv')
+    df_mmx[MmxColumns.AIR_TEMPERATURE] = df[RP5Columns.AIR_TEMPERATURE]
+    df_mmx[MmxColumns.HUMIDITY] = df[RP5Columns.HUMIDITY]
+    df_mmx[MmxColumns.WIND_SPEED] = df[RP5Columns.WIND_SPEED]
+    df_mmx[MmxColumns.WIND_MAX_SPEED] = df[RP5Columns.WIND_MAX_SPEED]
     df_mmx[MmxColumns.WIND_DIRECTION] = df[RP5Columns.WIND_DIRECTION].replace(map_wind_dir_rp5_to_mmx)
 
-    # precipitation code
     df_mmx[MmxColumns.PRECIPITATION_CODE] = pd.to_numeric(df[RP5Columns.PRECIPITATION_CODE].
                                                           replace(map_precip_code_rp5_to_mmx))
 
-    # precipitation intensity
-    df_mmx[MmxColumns.PRECIPITATION_INTENSITY] = pd.to_numeric(
-        df[RP5Columns.PRECIPITATION_INTENSITY].replace(map_precip_count_rp5_to_mmx)) / df[RP5Columns.PRECIPITATION_INTERVAL]
-    # visibility
+    df_mmx[MmxColumns.PRECIPITATION_INTENSITY] = pd.to_numeric(df[RP5Columns.PRECIPITATION_INTENSITY].
+                                                               replace(map_precip_count_rp5_to_mmx)) / \
+                                                df[RP5Columns.PRECIPITATION_INTERVAL]
+
+    df_mmx[MmxColumns.DEW_POINT] = df[RP5Columns.DEW_POINT]
+    df_mmx[MmxColumns.PRESSURE] = df[RP5Columns.PRESSURE]
     df_mmx[MmxColumns.VISIBILITY] = 1000 * pd.to_numeric(df[RP5Columns.VISIBILITY].
                                                          replace(map_visibility_rp5_to_mmx))
+    # TODO: code a parser for p_weather parameter
+    df_mmx[MmxColumns.P_WEATHER] = df[RP5Columns.PRECIPITATION_CODE].replace(map_p_weather_rp5_to_mmx)
 
-    # cloudiness
     df_mmx[MmxColumns.CLOUDINESS] = pd.to_numeric(df[RP5Columns.CLOUDINESS].
                                                   replace(map_cloudiness_rp5_to_mmx))
-    # t_air
-    df_mmx[MmxColumns.AIR_TEMPERATURE] = df[RP5Columns.AIR_TEMPERATURE]
-
-    # humidity
-    df_mmx[MmxColumns.HUMIDITY] = df[RP5Columns.HUMIDITY]
-
-    # wind_speed
-    df_mmx[MmxColumns.WIND_SPEED] = df[RP5Columns.WIND_SPEED]
-
-    # maximum wind speed
-    df_mmx[MmxColumns.WIND_MAX_SPEED] = df[RP5Columns.WIND_SPEED]
-
-    # dew point temperature
-    df_mmx[MmxColumns.DEW_POINT_TEMPERATURE] = df[RP5Columns.DEW_POINT_TEMPERATURE]
-
-    # pressure
-    df_mmx[MmxColumns.PRESSURE] = df[RP5Columns.PRESSURE]
-
-    # p_weather
-    df_mmx[MmxColumns.P_WEATHER] = df[RP5Columns.P_WEATHER]
-
-    # adding utc_time
-    df_mmx = add_utc(df_mmx, '/mnt/HARD/MinMax94/data/CSV/stations_mm94_def.csv')
+    df_mmx = df_mmx.sort_values(MmxColumns.DATE_TIME_UTC)
     return df_mmx
 
 
@@ -90,104 +78,70 @@ def convert_raw_to_mmx(df_raw):
     df = copy(df_raw)
     df_mmx = pd.DataFrame(index=df.index, columns=mmx_meteo_columns)
 
-    # station_id column
     df_mmx[MmxColumns.STATION_ID] = df[RawColumns.STATION_ID]
-
-    # date_time column
     df_mmx[MmxColumns.DATE_TIME_LOCAL] = df[RawColumns.DATE_TIME_LOCAL]
+    df_mmx[MmxColumns.DATE_TIME_UTC] = add_utc(df_mmx, data_directory+'/stations_mm94_def.csv')
+    df_mmx[MmxColumns.AIR_TEMPERATURE] = df[RawColumns.AIR_TEMPERATURE] / 10
+    df_mmx[MmxColumns.ROAD_TEMPERATURE] = df[RawColumns.ROAD_TEMPERATURE] / 10
+    df_mmx[MmxColumns.UNDERGROUND_TEMPERATURE] = df[RawColumns.UNDERGROUND_TEMPERATURE] / 10
+    df_mmx[MmxColumns.HUMIDITY] = df[RawColumns.HUMIDITY] / 10
+    df_mmx[MmxColumns.WIND_SPEED] = df[RawColumns.WIND_SPEED] / 10
+    df_mmx[MmxColumns.WIND_MAX_SPEED] = df[RawColumns.WIND_MAX_SPEED] / 10
+    df_mmx[MmxColumns.WIND_DIRECTION] = df[RawColumns.WIND_DIRECTION] * 45
+    df_mmx[MmxColumns.PRECIPITATION_CODE] = df[RawColumns.PRECIPITATION_CODE] * 10
+    df_mmx[MmxColumns.PRECIPITATION_INTENSITY] = df[RawColumns.PRECIPITATION_INTENSITY] / 10
+    df_mmx[MmxColumns.FREEZING_POINT] = df[RawColumns.FREEZING_POINT] / 10
+    df_mmx[MmxColumns.DEW_POINT] = df[RawColumns.DEW_POINT] / 10
+    df_mmx[MmxColumns.SALINITY] = df[RawColumns.SALINITY] / 10
+    df_mmx[MmxColumns.PRESSURE] = np.where((df[MmxColumns.PRESSURE] > 700) & (df[MmxColumns.PRESSURE] < 800),
+                                           df[MmxColumns.PRESSURE] * 10, df[MmxColumns.PRESSURE]) / 10
+    df_mmx[MmxColumns.VISIBILITY] = df[RawColumns.VISIBILITY] / 10
+    df_mmx[MmxColumns.P_WEATHER] = df[RawColumns.P_WEATHER]   # strange parameter, maybe set==0?
+    df_mmx[MmxColumns.CLOUDINESS] = df[RawColumns.CLOUDINESS] * 10
 
-    # wind_direction
-    df_mmx[MmxColumns.WIND_DIRECTION] = df[RawColumns.WIND_DIRECTION].replace(map_wind_dir_rp5_to_mmx)
-
-    # precipitation code
-    df_mmx[MmxColumns.PRECIPITATION_CODE] = pd.to_numeric(df[RawColumns.PRECIPITATION_CODE].
-                                                          replace(map_precip_code_rp5_to_mmx))
-
-    # precipitation intensity
-    df_mmx[MmxColumns.PRECIPITATION_INTENSITY] = pd.to_numeric(
-        df[RP5Columns.PRECIPITATION_INTENSITY].replace(map_precip_count_rp5_to_mmx)) / \
-                                                 df[RawColumns.PRECIPITATION_INTERVAL]
-    # visibility
-    df_mmx[MmxColumns.VISIBILITY] = 1000 * pd.to_numeric(df[RawColumns.VISIBILITY].
-                                                         replace(map_visibility_rp5_to_mmx))
-
-    # cloudiness
-    df_mmx[MmxColumns.CLOUDINESS] = pd.to_numeric(df[RawColumns.CLOUDINESS].
-                                                  replace(map_cloudiness_rp5_to_mmx))
-    # t_air
-    df_mmx[MmxColumns.AIR_TEMPERATURE] = df[RawColumns.AIR_TEMPERATURE]
-
-    # humidity
-    df_mmx[MmxColumns.HUMIDITY] = df[RawColumns.HUMIDITY]
-
-    # wind_speed
-    df_mmx[MmxColumns.WIND_SPEED] = df[RawColumns.WIND_SPEED]
-
-    # maximum wind speed
-    df_mmx[MmxColumns.WIND_MAX_SPEED] = df[RawColumns.WIND_MAX_SPEED]
-
-    # dew point temperature
-    df_mmx[MmxColumns.DEW_POINT_TEMPERATURE] = df[RawColumns.DEW_POINT_TEMPERATURE]
-
-    # pressure
-    df_mmx[MmxColumns.PRESSURE] = df[RawColumns.PRESSURE]
-
-    # p_weather
-    df_mmx[MmxColumns.P_WEATHER] = df[RawColumns.P_WEATHER]
-
-    # adding utc_time
-    df_mmx = add_utc(df_mmx, '/mnt/HARD/MinMax94/data/CSV/stations_rp5_def.csv')
     return df_mmx
 
 
-"""
-data_converter_raw_to_mmx = {
-    MmxColumns.AIR_TEMPERATURE: lambda df: df[MmxColumns.AIR_TEMPERATURE] / 10,
-    MmxColumns.ROAD_TEMPERATURE: lambda df: df[MmxColumns.ROAD_TEMPERATURE] / 10,
-    MmxColumns.UNDERGROUND_TEMPERATURE: lambda df: df[MmxColumns.UNDERGROUND_TEMPERATURE] / 10,
-    MmxColumns.HUMIDITY: lambda df: df[MmxColumns.HUMIDITY] / 10,
-    MmxColumns.WIND_SPEED: lambda df: df[MmxColumns.WIND_SPEED] / 10,
-    MmxColumns.WIND_MAX_SPEED: lambda df: df[MmxColumns.WIND_MAX_SPEED] / 10,
-    MmxColumns.WIND_DIRECTION: lambda df: df[MmxColumns.WIND_DIRECTION] * 45,
-    MmxColumns.PRECIPITATION_CODE: lambda df: df[MmxColumns.PRECIPITATION_CODE] * 10,
-    MmxColumns.PRECIPITATION_INTENSITY: lambda df: df[MmxColumns.PRECIPITATION_INTENSITY] / 10,
-    MmxColumns.FREEZING_POINT: lambda df: df[MmxColumns.FREEZING_POINT] / 10,
-    MmxColumns.DEW_POINT_TEMPERATURE: lambda df: df[MmxColumns.DEW_POINT_TEMPERATURE] / 10,
-    MmxColumns.SALINITY: lambda df: df[MmxColumns.SALINITY] / 10,
-    MmxColumns.PRESSURE: lambda df:  np.where((df[MmxColumns.PRESSURE] > 700) & (df[(MmxColumns.PRESSURE)] < 800),
-                                           df[(MmxColumns.PRESSURE)] * 10, df[(MmxColumns.PRESSURE)]) / 10,
-    MmxColumns.VISIBILITY: lambda df: df[MmxColumns.VISIBILITY] / 10,
-    MmxColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS] * 10,
-}
+def convert_mmx_to_mmcc_rwis(df_mmx):
+    df = copy(df_mmx)
+    df_rwis = pd.DataFrame(index=df.index, columns=mmcc_rwis_meteo_columns)
+
+    df_rwis[MmccRwisColumns.STATION_ID] = df[MmxColumns.STATION_ID]
+    df_rwis[MmccRwisColumns.DATE_TIME_UTC] = df_rwis[MmxColumns.DATE_TIME_UTC]
+    df_rwis[MmccRwisColumns.DATE_TIME_METRO] = df_rwis[MmxColumns.DATE_TIME_UTC].apply(mmx_datetime_to_mmcc_format)
+    df_rwis[MmccRwisColumns.AIR_TEMPERATURE] = df[MmxColumns.AIR_TEMPERATURE]
+    df_rwis[MmccRwisColumns.ROAD_TEMPERATURE] = df[MmxColumns.ROAD_TEMPERATURE]
+    df_rwis[MmccRwisColumns.UNDERGROUND_TEMPERATURE] = df[MmxColumns.UNDERGROUND_TEMPERATURE]
+    df_rwis[MmccRwisColumns.HUMIDITY] = df[MmxColumns.HUMIDITY]
+    df_rwis[MmccRwisColumns.WIND_SPEED] = df[MmxColumns.WIND_SPEED]
+    df_rwis[MmccRwisColumns.WIND_MAX_SPEED] = df[MmxColumns.WIND_MAX_SPEED]
+    df_rwis[MmccRwisColumns.WIND_DIRECTION] = df[MmxColumns.WIND_DIRECTION]
+    df_rwis[MmccRwisColumns.PRECIPITATION_CODE] = df[MmxColumns.PRECIPITATION_CODE]
+    df_rwis[MmccRwisColumns.PRECIPITATION_INTENSITY] = df[MmxColumns.PRECIPITATION_INTENSITY]
+    df_rwis[MmccRwisColumns.FREEZING_POINT] = df[MmccRwisColumns.FREEZING_POINT]
+    df_rwis[MmccRwisColumns.DEW_POINT_TEMPERATURE] = df[MmxColumns.DEW_POINT_TEMPERATURE]
+    df_rwis[MmccRwisColumns.SALINITY] = df[MmxColumns.SALINITY]
+    df_rwis[MmccRwisColumns.PRESSURE] = df[MmxColumns.PRESSURE]
+
+    return df_rwis
 
 
-data_converter_rp5_to_mmx = {
-    MmxColumns.WIND_DIRECTION: lambda df: df[MmxColumns.WIND_DIRECTION].replace(converter_wind_dir_dict_rp5),
-    MmxColumns.CLOUDINESS: lambda df: pd.to_numeric(df[MmxColumns.CLOUDINESS].replace(converter_cloudiness_dict_rp5)),
-    MmxColumns.PRECIPITATION_CODE: lambda df: pd.to_numeric(df[MmxColumns.PRECIPITATION_CODE].replace(converter_precip_code_dict_rp5)),
-    MmxColumns.PRECIPITATION_INTENSITY:
-        lambda df: pd.to_numeric(df[MmxColumns.PRECIPITATION_INTENSITY].replace(converter_precip_count_dict_rp5)) / \
-                   df[MmxColumns.PRECIPITATION_INTERVAL],
-    MmxColumns.VISIBILITY: lambda df: 1000 * pd.to_numeric(df[MmxColumns.VISIBILITY].replace(converter_visibility_dict_rp5)),
-    MmxColumns.DATE_TIME_LOCAL: lambda df: pd.to_datetime(df[MmxColumns.DATE_TIME_LOCAL].apply(rp5_datetime_to_mmx_format)),
-}
+def convert_mmx_to_mmcc_forecast(df_mmx):
+    df = copy(df_mmx)
+    df_forecast = pd.DataFrame(index=df.index, columns=mmcc_forecast_meteo_columns)
 
-
-data_converter_mmx_to_metro = {
-    MetroColumns.AIR_TEMPERATURE: lambda df: df[MetroColumns.AIR_TEMPERATURE].round(1),
-    MetroColumns.ROAD_TEMPERATURE: lambda df: df[MetroColumns.ROAD_TEMPERATURE].round(1),
-    MetroColumns.UNDERGROUND_TEMPERATURE: lambda df: df[MetroColumns.UNDERGROUND_TEMPERATURE].round(1),
-    MetroColumns.HUMIDITY: lambda df: df[MetroColumns.HUMIDITY].round(1),
-    MetroColumns.WIND_SPEED: lambda df: df[MetroColumns.WIND_SPEED].round(1),
-    MetroColumns.WIND_MAX_SPEED: lambda df: df[MetroColumns.WIND_MAX_SPEED].round(1),
-    MetroColumns.WIND_DIRECTION: lambda df: df[MetroColumns.WIND_DIRECTION].round(1),
-    MetroColumns.PRECIPITATION_CODE: lambda df: df[MetroColumns.PRECIPITATION_CODE],
-    MetroColumns.PRECIPITATION_INTENSITY: lambda df: df[MetroColumns.PRECIPITATION_INTENSITY].round(1),
-    MetroColumns.FREEZING_POINT: lambda df: df[MetroColumns.FREEZING_POINT].round(1),
-    MetroColumns.DEW_POINT_TEMPERATURE: lambda df: df[MetroColumns.DEW_POINT_TEMPERATURE].round(1),
-    MetroColumns.SALINITY: lambda df: df[MetroColumns.SALINITY].round(1),
-    MetroColumns.PRESSURE: lambda df: df[MetroColumns.PRESSURE].round(1),
-    MetroColumns.VISIBILITY: lambda df: df[MetroColumns.VISIBILITY].round(1),
-    MetroColumns.P_WEATHER: lambda df: df[MetroColumns.P_WEATHER],
-    MetroColumns.CLOUDINESS: lambda df: df[MetroColumns.CLOUDINESS].round(-1)
-}"""
+    df_forecast[MmccForecastColumns.STATION_ID] = df[MmxColumns.STATION_ID]
+    df_forecast[MmccForecastColumns.DATE_TIME_UTC] = df[MmxColumns.DATE_TIME_UTC]
+    df_forecast[MmccForecastColumns.DATE_TIME_METRO] = df[MmxColumns.DATE_TIME_UTC].apply(mmx_datetime_to_mmcc_format)
+    df_forecast[MmccForecastColumns.AIR_TEMPERATURE] = df[MmxColumns.AIR_TEMPERATURE]
+    df_forecast[MmccForecastColumns.HUMIDITY] = df[MmxColumns.HUMIDITY]
+    df_forecast[MmccForecastColumns.WIND_SPEED] = df[MmxColumns.WIND_SPEED]
+    df_forecast[MmccForecastColumns.WIND_DIRECTION] = df[MmxColumns.WIND_DIRECTION]
+    df_forecast[MmccForecastColumns.PRECIPITATION_CODE] = df[MmxColumns.PRECIPITATION_CODE]
+    df_forecast[MmccForecastColumns.PRECIPITATION_INTENSITY] = df[MmxColumns.PRECIPITATION_INTENSITY]
+    df_forecast[MmccForecastColumns.DEW_POINT] = df[MmxColumns.DEW_POINT]
+    df_forecast[MmccForecastColumns.PRESSURE] = df[MmxColumns.PRESSURE]
+    df_forecast[MmccForecastColumns.VISIBILITY] = df[MmxColumns.VISIBILITY]
+    df_forecast[MmccForecastColumns.P_WEATHER] = df[MmxColumns.P_WEATHER]
+    df_forecast[MmccForecastColumns.CLOUDINESS] = df[MmxColumns.CLOUDINESS].round(-1)
+    return df_forecast
