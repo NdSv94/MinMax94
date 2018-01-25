@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
 from copy import copy
-from constants import rp5_meteo_columns, raw_meteo_columns, mmx_meteo_columns
 from constants import map_visibility_rp5_to_mmx, map_precip_count_rp5_to_mmx, \
-                    map_precip_code_rp5_to_mmx, map_cloudiness_rp5_to_mmx, \
-                    map_wind_dir_rp5_to_mmx, mmx_meteo_columns, MmxColumns, RP5Columns, RawColumns, mmcc_rwis_meteo_columns, \
-                    MmccRwisColumns, MmccForecastColumns, mmcc_forecast_meteo_columns, map_p_weather_rp5_to_mmx, data_directory
+    map_precip_code_rp5_to_mmx, map_cloudiness_rp5_to_mmx, \
+    map_wind_dir_rp5_to_mmx, mmx_meteo_columns, MmxColumns, RP5Columns, RawColumns, mmcc_rwis_meteo_columns, \
+    MmccRwisColumns, MmccForecastColumns, mmcc_forecast_meteo_columns, map_p_weather_rp5_to_mmx, data_directory
 
 
 def rp5_datetime_to_mmx_format(datetime_rp5):
@@ -20,19 +19,36 @@ def mmx_datetime_to_mmcc_format(date_time):
     return str(date_time).rsplit(":", maxsplit=1)[0] + ' UTC'
 
 
-def add_utc(df_raw, station_def_path=data_directory+'/stations_mm94_def.csv'):
-    df_1 = copy(df_raw)
+def add_utc(df_raw, station_def_path=data_directory + '/stations_mm94_def.csv'):
+    df_todo = copy(df_raw)
     station_def = pd.read_csv(station_def_path)
 
     def utc_time(df, station_id):
         timezone = station_def['timezone'][station_def[MmxColumns.STATION_ID] == station_id].values[0]
-        df[MmxColumns.DATE_TIME_UTC] = pd.to_datetime(df[MmxColumns.DATE_TIME_LOCAL] - pd.Timedelta(str(timezone) + 'h'))
+        df[MmxColumns.DATE_TIME_UTC] = pd.to_datetime(
+            df[MmxColumns.DATE_TIME_LOCAL] - pd.Timedelta(str(timezone) + 'h'))
         return df
 
-    date_time_utc = df_1.groupby(MmxColumns.STATION_ID).apply(
+    date_time_utc = df_todo.groupby(MmxColumns.STATION_ID).apply(
         lambda df: utc_time(df, df.name)[[MmxColumns.DATE_TIME_UTC]])
     return date_time_utc
 
+def set_onelevel(df):
+    df_return = copy(df)
+    df_return.columns = ['_'.join(col).strip()
+                         if col not in ((MmxColumns.DATE_TIME_UTC, ''), (MmxColumns.STATION_ID, ''),
+                                        (MmxColumns.DATE_TIME_LOCAL, ''))
+                         else ''.join(col).strip() for col in df.columns.values]
+    return df_return
+
+
+def pivot_table(df):
+    upper_columns = [col for col in df.columns if col in ('data', 'id', 'valid')]
+    df_pivoted = df.pivot_table(index=[MmxColumns.STATION_ID, MmxColumns.DATE_TIME_LOCAL], columns='type', values=upper_columns)
+    df_pivoted = df_pivoted.reset_index()
+    df_pivoted.columns.names = [None] * len(df_pivoted.columns.names)
+    df_pivoted = set_onelevel(df_pivoted)
+    return df_pivoted
 
 def convert_rp5_to_mmx(df_rp5):
     df = copy(df_rp5)
@@ -47,7 +63,7 @@ def convert_rp5_to_mmx(df_rp5):
     df_mmx[MmxColumns.STATION_ID] = df[RP5Columns.STATION_ID]
     df_mmx[MmxColumns.DATE_TIME_LOCAL] = pd.to_datetime(df[RP5Columns.DATE_TIME_LOCAL].
                                                         apply(rp5_datetime_to_mmx_format))
-    df_mmx[MmxColumns.DATE_TIME_UTC] = add_utc(df_mmx, data_directory+'/stations_rp5_def.csv')
+    df_mmx[MmxColumns.DATE_TIME_UTC] = add_utc(df_mmx, data_directory + '/stations_rp5_def.csv')
     df_mmx[MmxColumns.AIR_TEMPERATURE] = df[RP5Columns.AIR_TEMPERATURE]
     df_mmx[MmxColumns.HUMIDITY] = df[RP5Columns.HUMIDITY]
     df_mmx[MmxColumns.WIND_SPEED] = df[RP5Columns.WIND_SPEED]
@@ -59,7 +75,7 @@ def convert_rp5_to_mmx(df_rp5):
 
     df_mmx[MmxColumns.PRECIPITATION_INTENSITY] = pd.to_numeric(df[RP5Columns.PRECIPITATION_INTENSITY].
                                                                replace(map_precip_count_rp5_to_mmx)) / \
-                                                df[RP5Columns.PRECIPITATION_INTERVAL]
+        df[RP5Columns.PRECIPITATION_INTERVAL]
 
     df_mmx[MmxColumns.DEW_POINT] = df[RP5Columns.DEW_POINT]
     df_mmx[MmxColumns.PRESSURE] = df[RP5Columns.PRESSURE]
@@ -76,11 +92,13 @@ def convert_rp5_to_mmx(df_rp5):
 
 def convert_raw_to_mmx(df_raw):
     df = copy(df_raw)
+    df = pivot_table(df)
     df_mmx = pd.DataFrame(index=df.index, columns=mmx_meteo_columns)
+    print(mmx_meteo_columns)
 
     df_mmx[MmxColumns.STATION_ID] = df[RawColumns.STATION_ID]
     df_mmx[MmxColumns.DATE_TIME_LOCAL] = df[RawColumns.DATE_TIME_LOCAL]
-    df_mmx[MmxColumns.DATE_TIME_UTC] = add_utc(df_mmx, data_directory+'/stations_mm94_def.csv')
+    df_mmx[MmxColumns.DATE_TIME_UTC] = add_utc(df_mmx, data_directory + '/stations_mm94_def.csv')
     df_mmx[MmxColumns.AIR_TEMPERATURE] = df[RawColumns.AIR_TEMPERATURE] / 10
     df_mmx[MmxColumns.ROAD_TEMPERATURE] = df[RawColumns.ROAD_TEMPERATURE] / 10
     df_mmx[MmxColumns.UNDERGROUND_TEMPERATURE] = df[RawColumns.UNDERGROUND_TEMPERATURE] / 10
@@ -95,8 +113,8 @@ def convert_raw_to_mmx(df_raw):
     df_mmx[MmxColumns.SALINITY] = df[RawColumns.SALINITY] / 10
     df_mmx[MmxColumns.PRESSURE] = np.where((df[MmxColumns.PRESSURE] > 700) & (df[MmxColumns.PRESSURE] < 800),
                                            df[MmxColumns.PRESSURE] * 10, df[MmxColumns.PRESSURE]) / 10
-    df_mmx[MmxColumns.VISIBILITY] = df[RawColumns.VISIBILITY] / 10
-    df_mmx[MmxColumns.P_WEATHER] = df[RawColumns.P_WEATHER]   # strange parameter, maybe set==0?
+    #df_mmx[MmxColumns.VISIBILITY] = df[RawColumns.VISIBILITY] / 10
+    #df_mmx[MmxColumns.P_WEATHER] = df[RawColumns.P_WEATHER]  # strange parameter, maybe set==0?
     df_mmx[MmxColumns.CLOUDINESS] = df[RawColumns.CLOUDINESS] * 10
 
     return df_mmx
