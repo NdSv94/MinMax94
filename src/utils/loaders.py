@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
-from copy import deepcopy
-from converters import MmxColumns, RP5Columns
 from constants import data_directory, rp5_columns, available_meteo_parameters
+from constants import RP5Columns
 
 
 def select_mm94_features(df, features='all'):
     if features == 'all':
         features = available_meteo_parameters
     return df[df['type'].isin(features)]
+
 
 def load_rp5_stations(wmo_stations_id):
     if isinstance(wmo_stations_id, np.int64):
@@ -46,6 +46,7 @@ def load_mm94_stations(mm94_stations_id, features_list='all'):
     for station_id in mm94_stations_id:
         raw = pd.read_csv(data_directory + '/MM94/' + str(station_id) + '_raw.csv', parse_dates=['date_time'])
         raw = select_mm94_features(raw, features=features_list)
+        raw = raw.drop_duplicates(subset=('date_time', 'station_id', 'sensor_type_id', 'type'))
         loaded_stations_list.append(raw)
     raw_stations = pd.concat(loaded_stations_list)
     raw_stations = raw_stations.reset_index(drop=True)
