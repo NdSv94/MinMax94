@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 data_directory = "/mnt/HARD/MinMax94/data/CSV"
 
+
 FORECAST_HOURS_BEFORE_PREDICTION = 3
 FORECAST_HOURS_AFTER_PREDICTION = 48
 
@@ -10,14 +11,14 @@ available_meteo_parameters = ['t_air', 't_road', 't_underroad', 'dampness', 'win
                               'dew_point', 'salinity', 'pressure', 'visibility', 'p_weather', 'cloudiness']
 
 RUSSIAN_TIME_ZONES = {
-    2: 'USZ1',
-    3: 'MSK',
-    4: 'SAMT',
-    8: 'IRKT',
-    5: 'YEKT',
-    6: 'OMSK',
-    7: 'KRAT',
-    9: 'YAKT',
+    2:  'USZ1',
+    3:  'MSK',
+    4:  'SAMT',
+    8:  'IRKT',
+    5:  'YEKT',
+    6:  'OMSK',
+    7:  'KRAT',
+    9:  'YAKT',
     10: 'VLAT',
     11: 'MAGT',
     12: 'PETT'
@@ -59,9 +60,6 @@ class DataFrameColumns(metaclass=ABCMeta):
 
 
 class RP5(DataFrameColumns):
-    """
-    Abbreviations from rp5.ru
-    """
 
     def __init__(self):
         super().__init__()
@@ -84,10 +82,6 @@ class RP5(DataFrameColumns):
 
 
 class Raw(DataFrameColumns):
-    """
-    Abbreviations from minimax system
-    """
-
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -104,7 +98,6 @@ class Mmx(DataFrameColumns):
     """
     Abbreviations from Skoltech system
     """
-
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -151,7 +144,6 @@ class MmccRwis(DataFrameColumns):
     """
     Abbreviations from Mmcc system
     """
-
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -206,7 +198,6 @@ class MmxPrecipitationCode:
     SNOW = 20
     RAIN_AND_SNOW = 30
     HEAVY_SNOW = 40
-
 
 RP5Columns = RP5()
 RawColumns = Raw()
