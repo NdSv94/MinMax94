@@ -2,9 +2,9 @@ from abc import ABCMeta, abstractmethod
 
 data_directory = "/mnt/HARD/MinMax94/data/CSV"
 
-
+HOURS_BEFORE_PREDICTION = 12
 FORECAST_HOURS_BEFORE_PREDICTION = 3
-FORECAST_HOURS_AFTER_PREDICTION = 48
+FORECAST_HOURS_AFTER_PREDICTION = 49
 
 available_meteo_parameters = ['t_air', 't_road', 't_underroad', 'dampness', 'wind_velocity', 'wind_speedmax',
                               'wind_dir', 'precip_code', 'precip_count', 'precip_interval', 'freezing_point',
@@ -25,11 +25,12 @@ RUSSIAN_TIME_ZONES = {
 }
 
 ROAD_LAYERS = {
-    "1": {"type": "asphalt", "thickness": 0.05},
-    "2": {"type": "cement", "thickness": 0.25},
-    "3": {"type": "crushed rock", "thickness": 0.20},
-    "4": {"type": "sand", "thickness": 0.50}
+    "1": {"type": "asphalt", "thickness": 0.3},
+    "2": {"type": "crushed rock", "thickness": 0.20},
+    "3": {"type": "sand", "thickness": 0.50}
 }
+
+CATEGORY = "2"
 
 ROAD_CATEGORY = 2
 
@@ -198,6 +199,7 @@ class MmxPrecipitationCode:
     SNOW = 20
     RAIN_AND_SNOW = 30
     HEAVY_SNOW = 40
+
 
 RP5Columns = RP5()
 RawColumns = Raw()

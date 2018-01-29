@@ -35,7 +35,7 @@ def convert_rp5_to_mmx(df_rp5, columns='all'):
         columns = mmx_columns
 
     elif columns == 'basic':
-        columns =  mmx_basic_columns
+        columns = mmx_basic_columns
 
     for key, func in map_data_rp5_to_mmx.items():
         if key in columns:
@@ -62,7 +62,8 @@ def convert_raw_to_mmx(df_raw, columns='all'):
             try:
                 df_mmx[key] = func(df)
             except KeyError:
-                print('Column {} can not be calculated'.format(key))
+                # print('Column {} can not be calculated'.format(key))
+                pass
 
     df_mmx = df_mmx.sort_values(by=MmxColumns.DATE_TIME_UTC)
     return df_mmx
@@ -76,7 +77,8 @@ def convert_mmx_to_mmcc_rwis(df_mmx):
         try:
             df_rwis[key] = func(df)
         except KeyError:
-            print('Column {} can not be calculated'.format(key))
+            pass
+            # print('Column {} can not be calculated'.format(key))
 
     df_rwis = df_rwis.fillna(9999)
     return df_rwis
@@ -90,7 +92,8 @@ def convert_mmx_to_mmcc_forecast(df_mmx):
         try:
             df_forecast[key] = func(df)
         except KeyError:
-            print('Column {} can not be calculated'.format(key))
+            # print('Column {} can not be calculated'.format(key))
+            pass
 
     df_forecast = df_forecast.fillna(9999)
     return df_forecast
