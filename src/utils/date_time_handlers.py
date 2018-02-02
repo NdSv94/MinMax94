@@ -32,10 +32,11 @@ def add_utc(df_raw, station_def_path=data_directory + '/stations_mm94_def.csv'):
         lambda df: utc_time(df, df.name)[[MmxColumns.DATE_TIME_UTC]])
     return date_time_utc
 
+
 def hours_from_utc(lat, lon):
     tzwh = tzwhere.tzwhere()
-    timezone_str = tzwh.tzNameAt(lat, lon) # Seville coordinates
+    timezone_str = tzwh.tzNameAt(lat, lon)  # Seville coordinates
 
     timezone_now = pytz.timezone(timezone_str)
-    hours_from_utc = datetime.datetime.now(timezone_now).utcoffset().total_seconds()/60/60
-    return hours_from_utc
+    utc_hours = datetime.datetime.now(timezone_now).utcoffset().total_seconds() / 60 / 60
+    return utc_hours

@@ -63,6 +63,7 @@ class ExtractorData():
     def ExtractFromStream(self):
         pass
 
+
 ###########################################################################################################
 def parse_timezone(property_string):
     property_dict = json.loads(property_string)

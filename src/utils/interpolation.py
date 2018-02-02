@@ -20,10 +20,10 @@ def create_patterns(df_mmx, max_gap=pd.Timedelta('2h'), min_length=pd.Timedelta(
     return df_patterns
 
 
-def interpolate_mmx(df_mmx, freq_minutes=30):
+def interpolate_mmx(df_mmx, interpol_freq=30):
 
-    freq = pd.Timedelta(freq_minutes, unit="m")
-    interpol_limit = round(180 / freq_minutes)
+    freq = pd.Timedelta(interpol_freq, unit="m")
+    interpol_limit = round(180 / interpol_freq)
 
     data_integer_columns = [column for column in df_mmx.columns if column in integer_mmx_columns]
     data_continuous_columns = [column for column in df_mmx.columns if column in continuous_mmx_columns]
@@ -51,15 +51,20 @@ def interpolate_mmx(df_mmx, freq_minutes=30):
                                     right_index=True, sort=True)
 
         for column in data_continuous_columns:
+            #if column in MmxColumns.PRECIPITATION_INTENSITY:
+
             df_result[column] = df_result[column].\
                 interpolate(method='linear', limit_directiom='both', limit=interpol_limit)
 
         for column in data_integer_columns:
+            #if column in MmxColumns.PRECIPITATION_CODE:
+
+            #elif:
             df_result[column] = df_result[column].\
                 interpolate(method='nearest', limit_directiom='both', limit=interpol_limit)
 
         # choose only values in "round" timestamps
-        mask = ((df_result.index.minute + df_result.index.hour * 60) % freq_minutes) == 0
+        mask = ((df_result.index.minute + df_result.index.hour * 60) % interpol_freq) == 0
         df_result = df_result[mask]
         df_result = df_result.dropna(thresh=3, subset=[col for col in mmx_basic_columns if col in df_result.columns])
         df_result = df_result.reset_index()

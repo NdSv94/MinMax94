@@ -18,5 +18,7 @@ def find_nearest_wmo_station(mm94_station_id):
     wmo_station_id = stations_rp5.loc[[stations_rp5.apply(
         lambda x: vincenty_dist(mm94_coords, (x['longitude'], x['latitude'])),
         axis=1).idxmin()]]['station_id'].values[0]
-
+    print(stations_rp5.apply(
+        lambda x: vincenty_dist(mm94_coords, (x['longitude'], x['latitude'])),
+        axis=1).min())
     return wmo_station_id
