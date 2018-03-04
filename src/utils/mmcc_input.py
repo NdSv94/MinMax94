@@ -1,9 +1,12 @@
 import pandas as pd
 from copy import copy
 from constants import RUSSIAN_TIME_ZONES, data_directory, ROAD_LAYERS, CATEGORY, \
-        ROAD_CATEGORY, MAINTAINABILITY_LEVEL
+    ROAD_CATEGORY, MAINTAINABILITY_LEVEL
 from constants import HOURS_BEFORE_PREDICTION, FORECAST_HOURS_AFTER_PREDICTION, FORECAST_HOURS_BEFORE_PREDICTION
 from constants import MmccForecastColumns, MmccRwisColumns
+import requests
+from time import sleep
+import json
 
 
 def get_station_config(mm94_station_id):
@@ -53,4 +56,68 @@ def get_global_forecast_json(df_forecast, time_record):
     global_forecast = global_forecast.set_index(MmccForecastColumns.DATE_TIME_METRO, drop=True)
     del global_forecast[MmccForecastColumns.STATION_ID]
     global_forecast_json = global_forecast.to_dict(orient='index')
+
+    for k, v in global_forecast_json.items():
+        global_forecast_json[k]['cloudiness'] = int(global_forecast_json[k]['cloudiness'])
+
     return global_forecast_json
+
+
+def get_mmcc_input_json(station_id, df_rwis, df_forecast, time_record):
+    station_config = get_station_config(station_id)
+    road_config = get_road_config(station_id)
+
+    rwis_data_json = get_rwis_data_json(df_rwis, time_record)
+    global_forecast_json = get_global_forecast_json(df_forecast, time_record)
+    mmcc_input_json = {"station_config": station_config,
+                       "road_config": road_config,
+                       "global_forecast": global_forecast_json,
+                       "rwis_data": rwis_data_json}
+
+    return mmcc_input_json
+
+
+def get_mmcc_prediction(mmcc_input_json, url_roadcast='http://127.0.0.1:5000/roadcast',
+                        url_calc='http://127.0.0.1:5000/calculation'):
+
+    with requests.Session() as session:
+        session.headers = {'Content-type': 'application/json', 'Host': ".api.mmcc.pkcup.ru",
+                           'cache-control': "no-cache",  # 'postman-token': '727b926f-c7b5-854e-06d7-bea9df150a12',
+                           'User-Agent': 'test'}
+
+        response_post = session.post(url_calc, params={"key": "MeAuthKeyMeSmart"}, json=mmcc_input_json)
+        #sleep(4)  # What should I do with it
+
+        flag = True
+        i = 0
+
+        while flag:
+            sleep(0.1)
+            i += 1
+
+            try:
+                job_id = json.loads(response_post.text)['job_id']
+                response_get = session.get(url_roadcast, params={"job_id": job_id, "key": "MeAuthKeyMeSmart"}, timeout=5)
+                mmcc_prediction = response_get.content
+                mmcc_prediction = json.loads(mmcc_prediction.decode('utf-8'))
+
+                if mmcc_prediction['roadcast']:
+                    flag = False
+                    #print(i * 0.1, 'seconds')
+
+            except KeyError:
+                print(response_post.content)
+                # print('-------------------')
+                mmcc_prediction = {'emergency_report': None,
+                                   'forecast_alerts': None,
+                                   'roadcast': None,
+                                   'roadcast_alerts': None}
+                flag = False
+
+            if i > 50:
+                flag = False
+                print('Too long to wait')
+                #print(i * 0.1, 'seconds')
+
+    # mmcc_prediction = response_get.content
+    return mmcc_prediction

@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 data_directory = "/mnt/HARD/MinMax94/data/CSV"
 
 HOURS_BEFORE_PREDICTION = 12
-FORECAST_HOURS_BEFORE_PREDICTION = 3
+FORECAST_HOURS_BEFORE_PREDICTION = 4
 FORECAST_HOURS_AFTER_PREDICTION = 49
 
 available_meteo_parameters = ['t_air', 't_road', 't_underroad', 'dampness', 'wind_velocity', 'wind_speedmax',

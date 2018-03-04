@@ -51,22 +51,27 @@ def interpolate_mmx(df_mmx, interpol_freq=30):
                                     right_index=True, sort=True)
 
         for column in data_continuous_columns:
-            #if column in MmxColumns.PRECIPITATION_INTENSITY:
 
-            df_result[column] = df_result[column].\
-                interpolate(method='linear', limit_directiom='both', limit=interpol_limit)
+            if column == MmxColumns.PRECIPITATION_INTENSITY:
+                df_result[column] = df_result[column]. \
+                    interpolate(method="linear",  limit_direction='both', limit=24)
+            else:
+                df_result[column] = df_result[column].\
+                    interpolate(method="linear", limit_direction='both', limit=interpol_limit)
 
         for column in data_integer_columns:
-            #if column in MmxColumns.PRECIPITATION_CODE:
-
-            #elif:
-            df_result[column] = df_result[column].\
-                interpolate(method='nearest', limit_directiom='both', limit=interpol_limit)
+            if column == MmxColumns.PRECIPITATION_CODE:
+                df_result[column] = df_result[column]. \
+                    interpolate(method='nearest', limit_direction='both', limit=24)
+            else:
+                df_result[column] = df_result[column].\
+                    interpolate(method='nearest', limit_direction='both', limit=interpol_limit)
 
         # choose only values in "round" timestamps
         mask = ((df_result.index.minute + df_result.index.hour * 60) % interpol_freq) == 0
         df_result = df_result[mask]
         df_result = df_result.dropna(thresh=3, subset=[col for col in mmx_basic_columns if col in df_result.columns])
+        # df_result = df_result.dropna()
         df_result = df_result.reset_index()
         return df_result
 

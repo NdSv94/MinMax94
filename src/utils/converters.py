@@ -62,6 +62,7 @@ def convert_raw_to_mmx(df_raw, columns='all'):
             try:
                 df_mmx[key] = func(df)
             except KeyError:
+                # print(key)
                 # print('Column {} can not be calculated'.format(key))
                 pass
 
@@ -95,5 +96,14 @@ def convert_mmx_to_mmcc_forecast(df_mmx):
             # print('Column {} can not be calculated'.format(key))
             pass
 
+    df_forecast['p_weather'] = df_forecast['p_weather'].fillna(0)
+    df_forecast['wind_direction'] = df_forecast['wind_direction'].fillna(0)
+    df_forecast['visibility'] = df_forecast['visibility'].fillna(10000)
+    df_forecast['wind_speed'] = df_forecast['wind_speed'].fillna(2)
+    df_forecast['humidity'] = df_forecast['humidity'].fillna(80)
+    df_forecast['cloudiness'] = df_forecast['cloudiness'].fillna(70)
+    df_forecast['precipitation_intensity'] = df_forecast['precipitation_intensity'].fillna(0)
+    df_forecast['precipitation_type'] = df_forecast['precipitation_type'].fillna(0)
     df_forecast = df_forecast.fillna(9999)
+
     return df_forecast
