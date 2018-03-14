@@ -1,7 +1,6 @@
 import pandas as pd
 from constants import data_directory, MmxColumns
-from copy import copy
-import numpy as np
+from functools import reduce
 
 
 def get_labels(df, labels_type='true'):
@@ -27,26 +26,36 @@ def get_labels(df, labels_type='true'):
     return labels
 
 
-def calculate_status_one_station(y_true, y_predict, window_size=pd.Timedelta('2h')):
+def get_points_locality(df, points_type, window=pd.Timedelta('2h')):
+    valid_points_type = {'label_true', 'label_predict'}
 
-    # both y_true, y_predict -- timeseries with timestamp index
+    if points_type in valid_points_type:
+        points_column = points_type
+    else:
+        raise ValueError("results: points_type must be one of %r." % valid_points_type)
 
-    true_positive = ((y_true.rolling(window_size).sum()) > 0).astype(int)
-    predicted_positive = ((y_predict.rolling(window_size).sum()) > 0).astype(int)
-
-    status = pd.Series(index=true_positive.index)
-
-    status = np.where((true_positive & predicted_positive), 'tp', status)
-    status = np.where((~true_positive & ~predicted_positive), 'tn', status)
-    status = np.where((~true_positive & predicted_positive), 'fp', status)
-    status = np.where((true_positive & ~predicted_positive), 'fn', status)
-    return status
+    df_points = df[df[points_column] == 1]
+    points_dt_list = list(df_points[MmxColumns.DATE_TIME_UTC])
+    interval_list = [(tp - window, tp + window) for tp in points_dt_list]
+    mask_list = [((df[MmxColumns.DATE_TIME_UTC] >= border[0]) & (df[MmxColumns.DATE_TIME_UTC] <= border[1])) for border
+                 in interval_list]
+    points_locality = reduce((lambda x, y: x | y), mask_list)
+    return points_locality
 
 
-def calculate_status(df):
-    columns_to_calc = ['date_time_utc', 'station_id', 'label_true', 'label_predict']
-    df_status = copy(df[columns_to_calc].set_index('date_time_utc'))
-    df_status['status'] = df_status.groupby('station_id').\
-                            apply(lambda df: calculate_status_one_station(df['label_true'], 'label_predict'))
-    df_status = df_status.reset_index(drop=False)
-    return df_status
+def calculate_precision(df, window=pd.Timedelta('2h')):
+    true_anomalies_locality = df.groupby(MmxColumns.STATION_ID).apply(
+        lambda data: get_points_locality(data, 'label_true', window)).reset_index(drop=True)
+    true_positive = df[true_anomalies_locality & (df['label_predict'] == 1)]
+    predicted_anomalies = df[df['label_predict'] == 1]
+    precision = len(true_positive) / len(predicted_anomalies)
+    return precision
+
+
+def calculate_recall(df, window=pd.Timedelta('2h')):
+    predicted_anomalies_locality = df.groupby(MmxColumns.STATION_ID).apply(
+        lambda data: get_points_locality(data, 'label_predict', window)).reset_index(drop=True)
+    true_positive = df[predicted_anomalies_locality & (df['label_true'] == 1)]
+    true_anomalies = df[df['label_true'] == 1]
+    recall = len(true_positive) / len(true_anomalies)
+    return recall
