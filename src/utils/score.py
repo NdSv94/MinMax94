@@ -9,7 +9,7 @@ def get_labels(df, labels_type='true'):
         if labels_type == 'generated':
             path = data_directory + '/Labels/Generated/'
         elif labels_type == 'true':
-            path = data_directory + '/Labels/Clean/'
+            path = data_directory + '/Labels/True/'
     else:
         raise ValueError("results: labels_type must be one of %r." % valid_labels_type)
 
