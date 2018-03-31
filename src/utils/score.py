@@ -1,6 +1,5 @@
 import pandas as pd
 from constants import data_directory, MmxColumns
-from functools import reduce
 
 
 def get_labels(df, labels_type='true'):
@@ -26,36 +25,47 @@ def get_labels(df, labels_type='true'):
     return labels
 
 
-def get_points_locality(df, points_type, window=pd.Timedelta('2h')):
-    valid_points_type = {'label_true', 'label_predict'}
+def calc_recall(df_test, station_list, window=pd.Timedelta('4h')):
+    predicted_anomalies_ids = set()
 
-    if points_type in valid_points_type:
-        points_column = points_type
-    else:
-        raise ValueError("results: points_type must be one of %r." % valid_points_type)
+    for station in station_list:
+        df = df_test[df_test[MmxColumns.STATION_ID] == station]
+        predicted_anomalies = df[df['label_predict'] == 1]
+        for anomaly in predicted_anomalies.iterrows():
+            dt = anomaly[1][MmxColumns.DATE_TIME_UTC]
+            locality = df_test[(df_test[MmxColumns.DATE_TIME_UTC] >= (dt - window)) &
+                               (df_test[MmxColumns.DATE_TIME_UTC] <= (dt + window))]
 
-    df_points = df[df[points_column] == 1]
-    points_dt_list = list(df_points[MmxColumns.DATE_TIME_UTC])
-    interval_list = [(tp - window, tp + window) for tp in points_dt_list]
-    mask_list = [((df[MmxColumns.DATE_TIME_UTC] >= border[0]) & (df[MmxColumns.DATE_TIME_UTC] <= border[1])) for border
-                 in interval_list]
-    points_locality = reduce((lambda x, y: x | y), mask_list)
-    return points_locality
+            predicted_anomalies_ids.update(set(locality.index))
+
+    true_anomalies_ids = set(df_test[(df_test['label_true'] == 1) &
+                                     (df_test[MmxColumns.STATION_ID].isin(station_list))].index)
+
+    tp = set.intersection(true_anomalies_ids, predicted_anomalies_ids)
+    recall = len(tp) / len(true_anomalies_ids)
+    return recall
 
 
-def calculate_precision(df, window=pd.Timedelta('2h')):
-    true_anomalies_locality = df.groupby(MmxColumns.STATION_ID).apply(
-        lambda data: get_points_locality(data, 'label_true', window)).reset_index(drop=True)
-    true_positive = df[true_anomalies_locality & (df['label_predict'] == 1)]
-    predicted_anomalies = df[df['label_predict'] == 1]
-    precision = len(true_positive) / len(predicted_anomalies)
+def calc_precision(df_test, station_list, window=pd.Timedelta('4h')):
+    true_anomalies_ids = set()
+
+    for station in station_list:
+        df = df_test[df_test[MmxColumns.STATION_ID] == station]
+        true_anomalies = df[df['label_true'] == 1]
+        for anomaly in true_anomalies.iterrows():
+            dt = anomaly[1][MmxColumns.DATE_TIME_UTC]
+            locality = df_test[(df_test[MmxColumns.DATE_TIME_UTC] >= (dt - window)) &
+                               (df_test[MmxColumns.DATE_TIME_UTC] <= (dt + window))]
+
+            true_anomalies_ids.update(set(locality.index))
+
+    predicted_anomalies_ids = set(df_test[((df_test['label_predict'] == 1) &
+                                           (df_test[MmxColumns.STATION_ID].isin(station_list)))].index)
+
+    tp = set.intersection(true_anomalies_ids, predicted_anomalies_ids)
+    precision = len(tp) / len(predicted_anomalies_ids)
     return precision
 
 
-def calculate_recall(df, window=pd.Timedelta('2h')):
-    predicted_anomalies_locality = df.groupby(MmxColumns.STATION_ID).apply(
-        lambda data: get_points_locality(data, 'label_predict', window)).reset_index(drop=True)
-    true_positive = df[predicted_anomalies_locality & (df['label_true'] == 1)]
-    true_anomalies = df[df['label_true'] == 1]
-    recall = len(true_positive) / len(true_anomalies)
-    return recall
+def calc_f1_score(precision, recall):
+    return 2 * precision * recall / (precision + recall)
