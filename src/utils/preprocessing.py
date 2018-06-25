@@ -23,65 +23,67 @@ def get_clean_data(df):
     return df_clean
 
 
-def create_feature_df_one_station(df_pattern, target='data_t_road', time=1,  # hours to predict
+def create_feature_df_one_station(df_pattern, target,
                                   winter_period=True,
-                                  variables=('data_t_road', 'data_t_air', 'data_t_underroad', 'data_pressure',
-                                             'data_dampness'),
+                                  variables=(MmxColumns.ROAD_TEMPERATURE,
+                                             MmxColumns.AIR_TEMPERATURE,
+                                             MmxColumns.UNDERGROUND_TEMPERATURE,
+                                             MmxColumns.PRESSURE,
+                                             MmxColumns.HUMIDITY, ),
+                                  interpol_freq=20,  # minutes
                                   lag_list=(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
                                   diff_list=((1, 2), (2, 3), (3, 4), (4, 5), (5, 6)),
                                   coordinates=True, solar_angles=True, road_id=True,
                                   day_of_year=True, month=True, hour=True,
                                   post_process=True, regression_mode=True):
     df_res = pd.DataFrame(index=df_pattern.index)
-    df_res['date_time_utc'] = copy(df_pattern['date_time_utc'])
-    df_res['station_id'] = copy(df_pattern['station_id'])
+    df_res[MmxColumns.DATE_TIME_UTC] = copy(df_pattern[MmxColumns.DATE_TIME_UTC])
+    df_res[MmxColumns.STATION_ID] = copy(df_pattern[MmxColumns.STATION_ID])
 
     if 'label_true' in df_pattern.columns:
         df_res['label_true'] = df_pattern['label_true']
 
     # do not forget to change!!!! for any column
-
     if MmxColumns.ID_ROAD_TEMPERATURE in df_pattern.columns:
         df_res[MmxColumns.ID_ROAD_TEMPERATURE] = df_pattern[MmxColumns.ID_ROAD_TEMPERATURE]
 
     if winter_period:
-        df_res = df_res[df_res['date_time_utc'].dt.month.isin((1, 2, 3, 9, 10, 11, 12))]
+        df_res = df_res[df_res[MmxColumns.DATE_TIME_UTC].dt.month.isin((1, 2, 3, 4, 5, 9, 10, 11, 12))]
 
     if coordinates:
-        # print('latitude', 'longitude')
-        df_res['data_latitude'] = copy(df_pattern['data_latitude'])
-        df_res['data_longitude'] = copy(df_pattern['data_longitude'])
+        df_res[MmxColumns.LATITUDE] = copy(df_pattern[MmxColumns.LATITUDE])
+        df_res[MmxColumns.LONGITUDE] = copy(df_pattern[MmxColumns.LONGITUDE])
 
     if solar_angles:
-        # print('solar_altitude', 'solar_azimuth')
         df_res['data_solar_altitude'] = copy(df_pattern['data_solar_altitude'])
         df_res['data_solar_azimuth'] = copy(df_pattern['data_solar_azimuth'])
 
     if road_id:
-        # print('road_id')
         df_res['data_road'] = copy(df_pattern['data_road'])
 
     for column in variables:
         df_res[column] = copy(df_pattern[column])
 
         for lag in lag_list:
-            lag_name = '{0}_lag_{1}'.format(column, lag)
-            # print(lag_name, lag + time * 2 - 1)
-            df_res[lag_name] = df_res[column].shift(int(lag + time * 2 - 1))
+            lag_name = '{0}_lag_{1}'.format(column, lag * interpol_freq)
+            # print(lag, lag_name)
+            df_res[lag_name] = df_res[column].shift(int(lag))
 
         for diff in diff_list:
-            diff_name = '{0}_diff_{1}{2}'.format(column, diff[0], diff[1])
+            diff_0 = interpol_freq * diff[0]
+            diff_1 = interpol_freq * diff[1]
+            diff_name = '{0}_diff_{1}_{2}'.format(column, diff_0, diff_1)
             # print(diff_name)
-            df_res[diff_name] = df_res['{0}_lag_{1}'.format(column, diff[1])] \
-                - df_res['{0}_lag_{1}'.format(column, diff[0])]
+            df_res[diff_name] = df_res['{0}_lag_{1}'.format(column, diff_1)] \
+                - df_res['{0}_lag_{1}'.format(column, diff_0)]
 
         if column != target:
-            #print(0, column)
+            # print(0, column)
             if post_process:
                 del df_res[column]
 
         else:
-            #print(1, column)
+            # print(1, column)
             if regression_mode:
                 target_column = 'target_{0}'.format('_'.join(column.split('_')[1:]))
                 df_res[target_column] = df_res[column]
@@ -106,17 +108,23 @@ def create_feature_df_one_station(df_pattern, target='data_t_road', time=1,  # h
     return df_res
 
 
-def create_feature_df(df, target='data_t_road', time=1,  # hours to predict
+def create_feature_df(df, target,
                       winter_period=True,
-                      variables=('data_t_road', 'data_t_air', 'data_t_underroad', 'data_pressure', 'data_dampness'),
+                      variables=(MmxColumns.ROAD_TEMPERATURE,
+                                 MmxColumns.AIR_TEMPERATURE,
+                                 MmxColumns.UNDERGROUND_TEMPERATURE,
+                                 MmxColumns.PRESSURE,
+                                 MmxColumns.HUMIDITY,),
+                      interpol_freq=20,  # minutes
                       lag_list=(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
                       diff_list=((1, 2), (2, 3), (3, 4), (4, 5), (5, 6)),
                       coordinates=True, solar_angles=True, road_id=True,
                       day_of_year=True, month=True, hour=True, post_process=True, regression_mode=True):
 
     df_res = df.groupby([MmxColumns.STATION_ID]). \
-        apply(lambda x: create_feature_df_one_station(x, target, time,  # hours to predict
+        apply(lambda x: create_feature_df_one_station(x, target,
                                                       winter_period, variables,
+                                                      interpol_freq,
                                                       lag_list, diff_list,
                                                       coordinates, solar_angles,
                                                       road_id, day_of_year,
