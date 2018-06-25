@@ -86,7 +86,7 @@ def get_mmcc_prediction(mmcc_input_json, url_roadcast='http://127.0.0.1:5000/roa
                            'User-Agent': 'test'}
 
         response_post = session.post(url_calc, params={"key": "MeAuthKeyMeSmart"}, json=mmcc_input_json)
-        #sleep(4)  # What should I do with it
+        # sleep(4)  # What should I do with it
 
         flag = True
         i = 0
@@ -97,13 +97,14 @@ def get_mmcc_prediction(mmcc_input_json, url_roadcast='http://127.0.0.1:5000/roa
 
             try:
                 job_id = json.loads(response_post.text)['job_id']
-                response_get = session.get(url_roadcast, params={"job_id": job_id, "key": "MeAuthKeyMeSmart"}, timeout=5)
+                response_get = session.get(url_roadcast,
+                                           params={"job_id": job_id, "key": "MeAuthKeyMeSmart"}, timeout=5)
                 mmcc_prediction = response_get.content
                 mmcc_prediction = json.loads(mmcc_prediction.decode('utf-8'))
 
                 if mmcc_prediction['roadcast']:
                     flag = False
-                    #print(i * 0.1, 'seconds')
+                    # print(i * 0.1, 'seconds')
 
             except KeyError:
                 print(response_post.content)
@@ -117,7 +118,7 @@ def get_mmcc_prediction(mmcc_input_json, url_roadcast='http://127.0.0.1:5000/roa
             if i > 50:
                 flag = False
                 print('Too long to wait')
-                #print(i * 0.1, 'seconds')
+                # print(i * 0.1, 'seconds')
 
     # mmcc_prediction = response_get.content
     return mmcc_prediction
