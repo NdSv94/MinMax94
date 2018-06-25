@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from copy import copy
 
 data_directory = "/mnt/HARD/MinMax94/data/CSV"
 
@@ -11,14 +12,14 @@ available_meteo_parameters = ['t_air', 't_road', 't_underroad', 'dampness', 'win
                               'dew_point', 'salinity', 'pressure', 'visibility', 'p_weather', 'cloudiness']
 
 RUSSIAN_TIME_ZONES = {
-    2:  'USZ1',
-    3:  'MSK',
-    4:  'SAMT',
-    8:  'IRKT',
-    5:  'YEKT',
-    6:  'OMSK',
-    7:  'KRAT',
-    9:  'YAKT',
+    2: 'USZ1',
+    3: 'MSK',
+    4: 'SAMT',
+    8: 'IRKT',
+    5: 'YEKT',
+    6: 'OMSK',
+    7: 'KRAT',
+    9: 'YAKT',
     10: 'VLAT',
     11: 'MAGT',
     12: 'PETT'
@@ -61,7 +62,6 @@ class DataFrameColumns(metaclass=ABCMeta):
 
 
 class RP5(DataFrameColumns):
-
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -99,6 +99,7 @@ class Mmx(DataFrameColumns):
     """
     Abbreviations from Skoltech system
     """
+
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -121,6 +122,8 @@ class Mmx(DataFrameColumns):
         self.VISIBILITY = 'data_visibility'
         self.P_WEATHER = 'data_p_weather'
         self.CLOUDINESS = 'data_cloudiness'
+        self.LONGITUDE = 'data_longitude'
+        self.LATITUDE = 'data_latitude'
 
         self.ID_AIR_TEMPERATURE = 'id_t_air'
         self.ID_ROAD_TEMPERATURE = 'id_t_road'
@@ -145,6 +148,7 @@ class MmccRwis(DataFrameColumns):
     """
     Abbreviations from Mmcc system
     """
+
     def __init__(self):
         super().__init__()
         self.STATION_ID = 'station_id'
@@ -225,3 +229,43 @@ mmcc_rwis_meteo_columns = MmccRwisColumns.get_meteo_data_columns
 
 mmcc_forecast_columns = MmccForecastColumns.get_columns
 mmcc_forecast_meteo_columns = MmccForecastColumns.get_meteo_data_columns
+
+# ------------------------------Feature_Selection------------------------------ #
+
+# Now params for all sensors are the same. Can be diversified if needed
+params_anomaly_common = {'variables': (MmxColumns.AIR_TEMPERATURE,
+                                       MmxColumns.ROAD_TEMPERATURE,
+                                       MmxColumns.UNDERGROUND_TEMPERATURE,
+                                       MmxColumns.PRESSURE,
+                                       MmxColumns.HUMIDITY,),
+                         'interpol_freq': 20,
+                         'lag_list': (1, 2, 3, 4, 5, 6, 7, 8),
+                         'diff_list': ((1, 2), (2, 3), (3, 4), (4, 5), (5, 6)),
+                         'coordinates': True,
+                         'solar_angles': True,
+                         'road_id': False,
+                         'day_of_year': True,
+                         'month': False,
+                         'hour': True,
+                         'post_process': True, }
+
+params_anomaly_t_air = copy(params_anomaly_common)
+params_anomaly_t_road = copy(params_anomaly_common)
+params_anomaly_t_underroad = copy(params_anomaly_common)
+params_anomaly_pressure = copy(params_anomaly_common)
+params_anomaly_humidity = copy(params_anomaly_common)
+
+params_anomaly_feature_selection = {MmxColumns.AIR_TEMPERATURE: params_anomaly_t_air,
+                                    MmxColumns.ROAD_TEMPERATURE: params_anomaly_t_road,
+                                    MmxColumns.UNDERGROUND_TEMPERATURE: params_anomaly_t_underroad,
+                                    MmxColumns.PRESSURE: params_anomaly_pressure,
+                                    MmxColumns.HUMIDITY: params_anomaly_humidity}
+
+
+# Thresholds for Anomaly detection algorithms for each sensor
+
+anomaly_threshold = {MmxColumns.AIR_TEMPERATURE: 2.5,  # demands further tuning
+                     MmxColumns.ROAD_TEMPERATURE: 3.7,
+                     MmxColumns.UNDERGROUND_TEMPERATURE: 2.7,
+                     MmxColumns.PRESSURE: 1.8,
+                     MmxColumns.HUMIDITY: 12, }        # demands further tuning
