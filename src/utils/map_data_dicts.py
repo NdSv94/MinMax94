@@ -21,7 +21,8 @@ map_wind_dir_rp5_to_mmx = {
     "Ветер, дующий с востока": 270,
     "Ветер, дующий с востоко-юго-востока": 292.5,
     "Ветер, дующий с юго-востока": 315,
-    "Ветер, дующий с юго-юго-востока": 337.5
+    "Ветер, дующий с юго-юго-востока": 337.5,
+    "Переменное направление": 0,
 }
 
 map_cloudiness_rp5_to_mmx = {
@@ -188,3 +189,21 @@ map_data_mmx_to_mmcc_forecast = {
     MmccForecastColumns.P_WEATHER: lambda df: df[MmxColumns.P_WEATHER].round(-1),
     MmccForecastColumns.CLOUDINESS: lambda df: df[MmxColumns.CLOUDINESS].round(-1)
 }
+
+map_data_mmcc_rwis_to_mmx = {
+    MmxColumns.STATION_ID: lambda df: df[MmccRwisColumns.STATION_ID],
+    MmxColumns.DATE_TIME_UTC: lambda df: pd.to_datetime(df[MmccRwisColumns.DATE_TIME_METRO]),
+    MmxColumns.DATE_TIME_LOCAL: lambda df: pd.to_datetime(df[MmccRwisColumns.DATE_TIME_METRO]),
+    MmxColumns.AIR_TEMPERATURE: lambda df: df[MmccRwisColumns.AIR_TEMPERATURE],
+    MmxColumns.ROAD_TEMPERATURE: lambda df: df[MmccRwisColumns.ROAD_TEMPERATURE],
+    MmxColumns.UNDERGROUND_TEMPERATURE: lambda df: df[MmccRwisColumns.UNDERGROUND_TEMPERATURE],
+    MmxColumns.HUMIDITY: lambda df: df[MmccRwisColumns.HUMIDITY],
+    MmxColumns.WIND_SPEED: lambda df: df[MmccRwisColumns.WIND_SPEED],
+    MmxColumns.WIND_MAX_SPEED: lambda df: df[MmccRwisColumns.WIND_MAX_SPEED],
+    MmxColumns.WIND_DIRECTION: lambda df: df[MmccRwisColumns.WIND_DIRECTION],
+    MmxColumns.PRECIPITATION_CODE: lambda df: df[MmccRwisColumns.PRECIPITATION_CODE],
+    MmxColumns.PRECIPITATION_INTENSITY: lambda df: df[MmccRwisColumns.PRECIPITATION_INTENSITY],
+    MmxColumns.FREEZING_POINT: lambda df: df[MmccRwisColumns.FREEZING_POINT],
+    MmxColumns.DEW_POINT: lambda df: df[MmccRwisColumns.DEW_POINT],
+    MmxColumns.SALINITY: lambda df: df[MmccRwisColumns.SALINITY],
+    MmxColumns.PRESSURE: lambda df: df[MmccRwisColumns.PRESSURE]}
