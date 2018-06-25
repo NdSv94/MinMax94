@@ -1,13 +1,18 @@
 import pandas as pd
-# import numpy as np
+import numpy as np
 from copy import copy
 from date_time_handlers import add_utc
-from constants import MmxColumns, data_directory, mmcc_rwis_columns, mmcc_forecast_columns, \
-    mmx_basic_columns, mmx_columns
+from constants import MmxColumns, MmccRwisColumns, data_directory, mmcc_rwis_columns, mmcc_forecast_columns, \
+    mmx_basic_columns, mmx_columns, mmx_meteo_columns
 from map_data_dicts import map_data_rp5_to_mmx, map_data_raw_to_mmx, \
-    map_data_mmx_to_mmcc_forecast, map_data_mmx_to_mmcc_rwis
+    map_data_mmx_to_mmcc_forecast, map_data_mmx_to_mmcc_rwis, map_data_mmcc_rwis_to_mmx
+from interpolation import interpolate_mmx
+from geographical import add_solar_angles
 
 
+# --------------------------------------------------------------------------------
+# Converters for training algorithms. Experimental stage
+# --------------------------------------------------------------------------------
 def set_one_level(df):
     df_return = copy(df)
     df_return.columns = ['_'.join(col).strip()
@@ -107,3 +112,47 @@ def convert_mmx_to_mmcc_forecast(df_mmx):
     df_forecast = df_forecast.fillna(9999)
 
     return df_forecast
+
+
+def convert_mmcc_rwis_to_mmx(df_rwis):
+    df = copy(df_rwis)
+    df_mmx = pd.DataFrame(index=df.index, columns=mmx_meteo_columns)
+
+    for key, func in map_data_mmcc_rwis_to_mmx.items():
+        try:
+            df_mmx[key] = func(df)
+        except KeyError:
+            pass
+
+    df_mmx = df_mmx.replace({9999: np.nan})
+    return df_mmx
+
+
+# ---------------------------------------------------------------------------------------------
+# Converters for application. Production stage
+# ---------------------------------------------------------------------------------------------
+
+
+def convert_input_for_anomaly_detection(input_json, interpol_freq=20):
+    rwis_data = input_json['rwis_data']
+    station_config = input_json['station_config']
+
+    # Convert input json into pd.Dataframe of MmccRwis type
+    rwis_df = pd.DataFrame.from_dict(rwis_data, orient='index', )
+    rwis_df[MmccRwisColumns.DATE_TIME_METRO] = rwis_df.index
+    rwis_df = rwis_df.reset_index(drop=True)
+    rwis_df[MmccRwisColumns.STATION_ID] = station_config['station_id']
+
+    # Convert MmccRwis table into Mmx table
+    mmx_rwis = convert_mmcc_rwis_to_mmx(rwis_df)
+
+    # Interpolate Mmx Table for further analysis
+    mmx_rwis = interpolate_mmx(mmx_rwis, interpol_freq)
+
+    # Adding geographical coordinates into Mmx table
+    mmx_rwis[MmxColumns.LONGITUDE] = station_config['longitude']
+    mmx_rwis[MmxColumns.LATITUDE] = station_config['latitude']
+
+    # Adding solar angles into Mmx table
+    mmx_rwis['data_solar_azimuth'], mmx_rwis['data_solar_altitude'] = add_solar_angles(mmx_rwis)
+    return mmx_rwis
